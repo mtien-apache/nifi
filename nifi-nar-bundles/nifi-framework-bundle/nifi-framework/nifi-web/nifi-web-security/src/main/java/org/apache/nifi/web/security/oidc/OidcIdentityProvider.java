@@ -22,6 +22,7 @@ import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.oauth2.sdk.id.ClientID;
 import java.io.IOException;
 import java.net.URI;
+import org.apache.nifi.web.security.token.LoginAuthenticationToken;
 
 public interface OidcIdentityProvider {
 
@@ -61,6 +62,20 @@ public interface OidcIdentityProvider {
     URI getEndSessionEndpoint();
 
     /**
+     * Returns the URI for the revocation endpoint.
+     *
+     * @return uri for the revocation endpoint
+     */
+    URI getRevocationEndpoint();
+
+    /**
+     * Returns {@code true} if back-channel logout is supported.
+     *
+     * @return true if back-channel logout is supported
+     */
+    boolean supportsBackChannelLogout();
+
+    /**
      * Returns the scopes supported by the OIDC provider.
      *
      * @return support scopes
@@ -75,5 +90,7 @@ public interface OidcIdentityProvider {
      * @return a NiFi JWT
      * @throws IOException if there was an exceptional error while communicating with the OIDC provider
      */
-    String exchangeAuthorizationCode(AuthorizationGrant authorizationGrant) throws IOException;
+    LoginAuthenticationToken exchangeAuthorizationCodeforLoginAuthenticationToken(AuthorizationGrant authorizationGrant) throws IOException;
+
+    String exchangeAuthorizationCodeForAccessToken(AuthorizationGrant authorizationGrant);
 }
