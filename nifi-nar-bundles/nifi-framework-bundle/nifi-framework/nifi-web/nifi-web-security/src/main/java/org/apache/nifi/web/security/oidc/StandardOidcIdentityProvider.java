@@ -50,6 +50,7 @@ import com.nimbusds.openid.connect.sdk.claims.AccessTokenHash;
 import com.nimbusds.openid.connect.sdk.claims.IDTokenClaimsSet;
 import com.nimbusds.openid.connect.sdk.op.OIDCProviderMetadata;
 import com.nimbusds.openid.connect.sdk.token.OIDCTokens;
+import com.nimbusds.openid.connect.sdk.validators.AccessTokenValidator;
 import com.nimbusds.openid.connect.sdk.validators.IDTokenValidator;
 import com.nimbusds.openid.connect.sdk.validators.InvalidHashException;
 import java.io.IOException;
@@ -381,19 +382,18 @@ public class StandardOidcIdentityProvider implements OidcIdentityProvider {
     private String getAccessToken(OIDCTokenResponse response) throws java.text.ParseException, InvalidHashException {
         final OIDCTokens oidcTokens = response.getOIDCTokens();
 
-        // TODO: Need to extract AccessTokenHash (not string value) to validate the access token.
-        //  Or may need to manually validate access token
-
-        // validate the access token
+        // Validate the Access Token
         final AccessToken accessToken = oidcTokens.getAccessToken();
-        // rawPreferredJwsAlgorithm
+
+        // Get the preferredJwsAlgorithm
         final JWSAlgorithm jwsAlgorithm = extractJwsAlgorithm();
-        // accessTokenHash
+
+        // Get the accessTokenHash
         final String atHash = oidcTokens.getIDToken().getJWTClaimsSet().getStringClaim("at_hash");
 
         validateAccessToken(accessToken, jwsAlgorithm, atHash);
 
-        // return the access token string
+        // return the Access Token string
         return oidcTokens.getAccessToken().getValue();
     }
 
@@ -429,25 +429,17 @@ public class StandardOidcIdentityProvider implements OidcIdentityProvider {
     }
 
     private void validateAccessToken(final AccessToken accessToken, final JWSAlgorithm jwsAlgorithm, final String accessTokenHash) throws InvalidHashException {
-        // Compute the expected Access Token Hash
-        AccessTokenHash expectedHash = AccessTokenHash.compute(accessToken, jwsAlgorithm);
+        // Compute the Access Token Hash
+        AccessTokenHash ath = new AccessTokenHash(accessTokenHash);
 
-        if (expectedHash == null) {
-            throw InvalidHashException.INVALID_ACCESS_T0KEN_HASH_EXCEPTION;
-        }
-
-        // Compare the computed hash to the given hash
-        if ( !(expectedHash.toString().equals(accessTokenHash)) ) {
-            throw InvalidHashException.INVALID_ACCESS_T0KEN_HASH_EXCEPTION;
-        }
-//        AccessTokenValidator.validate(accessToken, jwsAlgorithm, accessTokenHash);
+        AccessTokenValidator.validate(accessToken, jwsAlgorithm, ath);
     }
 
     private LoginAuthenticationToken convertOIDCTokenToLoginAuthenticationToken(OIDCTokenResponse response) throws BadJOSEException, JOSEException, java.text.ParseException, IOException {
 //        final OIDCTokenResponse oidcTokenResponse = response;
         final OIDCTokens oidcTokens = response.getOIDCTokens();
         final JWT oidcJwt = oidcTokens.getIDToken();
-//
+
 //        // validate the token - no nonce required for authorization code flow
 //        final IDTokenClaimsSet claimsSet = tokenValidator.validate(oidcJwt, null);
 
