@@ -32,6 +32,7 @@ import io.swagger.annotations.ApiResponses;
 import java.io.IOException;
 import java.net.URI;
 import java.security.cert.X509Certificate;
+import java.util.Objects;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import javax.servlet.ServletContext;
@@ -51,6 +52,7 @@ import javax.ws.rs.core.Response;
 import javax.ws.rs.core.UriBuilder;
 import okhttp3.Call;
 import okhttp3.FormBody;
+import okhttp3.HttpUrl;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.RequestBody;
@@ -361,22 +363,18 @@ public class AccessResource extends ApplicationResource {
                     .queryParam("post_logout_redirect_uri", postLogoutRedirectUri)
                     .build();
             httpServletResponse.sendRedirect(logoutUri.toString());
+        } else {
+            // If end session endpoint is null, then try the revocation endpoint
+            URI revokeEndpoint = getRevokeEndpoint();
+            if (revokeEndpoint != null) {
+
+                // Request an access token to use for the revoke endpoint
+                URI authorizationURI = oidcRequestAuthorizationCode(httpServletResponse, getOidcLogoutCallback());
+
+                httpServletResponse.sendRedirect(authorizationURI.toString());
+            }
         }
 
-        // If end session endpoint is null, then try the revocation endpoint
-        // May not need to check endpoint here?
-        URI revokeEndpoint = getRevokeEndpoint();
-        if (revokeEndpoint != null) {
-
-            // Request an access token to use for the revoke endpoint
-            URI authorizationURI = oidcRequestAuthorizationCode(httpServletResponse, getOidcLogoutCallback());
-
-            httpServletResponse.sendRedirect(authorizationURI.toString());
-        }
-    }
-
-    private URI getRevokeEndpoint() {
-        return oidcService.getRevocationEndpoint();
     }
 
     @GET
@@ -473,8 +471,8 @@ public class AccessResource extends ApplicationResource {
                             .build();
 
                     Request request = new Request.Builder()
-                            // Temporary hard-coded URL for Google
-                            .url("https://accounts.google.com/o/oauth2/revoke")
+//                            .url("https://accounts.google.com/o/oauth2/revoke")
+                            .url(Objects.requireNonNull(HttpUrl.get(revokeEndpoint)))
                             .post(formBody)
                             .build();
 
@@ -483,15 +481,27 @@ public class AccessResource extends ApplicationResource {
 
                     if (response.isSuccessful()) {
                         // TODO: Delete the NiFi JWT
-                        logger.info("**RESPONSE: " + response + ". RESPONSE SUCCESSFUL");
+//                        try {
+//                            logger.info("Logging out user");
+//                            jwtService.logOutUsingAuthHeader(httpServletRequest.getHeader(JwtAuthenticationFilter.AUTHORIZATION));
+//                            logger.info("Successfully logged out user");
+//                        } catch (final JwtException e) {
+//                            logger.error("Logout of user failed due to: " + e.getMessage());
+////                            return Response.serverError().build();
+//                        }
 
-                        // Redirect to nifi home page (or log in page?)
-                        String postLogoutRedirectUri = generateResourceUri("..", "nifi");
+                        logger.info("**RESPONSE: " + response + ". LOG OUT RESPONSE IS A SUCCESS.");
+
+                        // TODO: Redirect to a NiFi logout page
+//                        String postLogoutRedirectUri = generateResourceUri("..", "nifi");
+//                        String postLogoutRedirectUri = "https://www.google.com/";
+                        String postLogoutRedirectUri = generateResourceUri("..", "access", "logout");
+                        logger.info("**NOW REDIRECTING TO : " + postLogoutRedirectUri);
                         httpServletResponse.sendRedirect(postLogoutRedirectUri);
                     }
                 } catch (IOException e) {
-                    logger.info("OIDC oidc/logoutCallback Response error: " + e);
-                    throw new IOException("OIDC oidc/logoutCallback Response error: " + e);
+                    logger.info("oidc/logoutCallback Response error: " + e);
+                    throw new IOException("oidc/logoutCallback Response error: " + e);
                 }
             }
 
@@ -987,8 +997,8 @@ public class AccessResource extends ApplicationResource {
         return generateResourceUri("access", "oidc", "logoutCallback");
     }
 
-    private String getOidcBackChannelLogout() {
-        return generateResourceUri("access", "oidc", "logout");
+    private URI getRevokeEndpoint() {
+        return oidcService.getRevocationEndpoint();
     }
 
     private String getNiFiUri() {
