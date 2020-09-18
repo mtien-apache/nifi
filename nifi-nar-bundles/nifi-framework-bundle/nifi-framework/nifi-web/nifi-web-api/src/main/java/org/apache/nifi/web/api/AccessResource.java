@@ -112,6 +112,7 @@ public class AccessResource extends ApplicationResource {
 
     private static final String OIDC_REQUEST_IDENTIFIER = "oidc-request-identifier";
     private static final String OIDC_ERROR_TITLE = "Unable to continue login sequence";
+    private static final String OPEN_ID_CONNECT_SUPPORT_IS_NOT_CONFIGURED_MSG = "OpenId Connect support is not configured";
 
     private static final String AUTHENTICATION_NOT_ENABLED_MSG = "User authentication/authorization is only supported when running over HTTPS.";
 
@@ -174,7 +175,7 @@ public class AccessResource extends ApplicationResource {
 
         // ensure oidc is enabled
         if (!oidcService.isOidcEnabled()) {
-            forwardToMessagePage(httpServletRequest, httpServletResponse, "OpenId Connect is not configured.");
+            forwardToMessagePage(httpServletRequest, httpServletResponse, OPEN_ID_CONNECT_SUPPORT_IS_NOT_CONFIGURED_MSG);
             return;
         }
 
@@ -215,13 +216,13 @@ public class AccessResource extends ApplicationResource {
     public void oidcCallback(@Context HttpServletRequest httpServletRequest, @Context HttpServletResponse httpServletResponse) throws Exception {
         // only consider user specific access over https
         if (!httpServletRequest.isSecure()) {
-            forwardToMessagePage(httpServletRequest, httpServletResponse, "User authentication/authorization is only supported when running over HTTPS.");
+            forwardToMessagePage(httpServletRequest, httpServletResponse, AUTHENTICATION_NOT_ENABLED_MSG);
             return;
         }
 
         // ensure oidc is enabled
         if (!oidcService.isOidcEnabled()) {
-            forwardToMessagePage(httpServletRequest, httpServletResponse, "OpenId Connect is not configured.");
+            forwardToMessagePage(httpServletRequest, httpServletResponse, OPEN_ID_CONNECT_SUPPORT_IS_NOT_CONFIGURED_MSG);
             return;
         }
 
@@ -315,7 +316,7 @@ public class AccessResource extends ApplicationResource {
 
         // ensure oidc is enabled
         if (!oidcService.isOidcEnabled()) {
-            throw new IllegalStateException("OpenId Connect is not configured.");
+            throw new IllegalStateException(OPEN_ID_CONNECT_SUPPORT_IS_NOT_CONFIGURED_MSG);
         }
 
         final String oidcRequestIdentifier = getCookieValue(httpServletRequest.getCookies(), OIDC_REQUEST_IDENTIFIER);
@@ -346,11 +347,11 @@ public class AccessResource extends ApplicationResource {
     )
     public void oidcLogout(@Context HttpServletRequest httpServletRequest, @Context HttpServletResponse httpServletResponse) throws Exception {
         if (!httpServletRequest.isSecure()) {
-            throw new IllegalStateException("User authentication/authorization is only supported when running over HTTPS.");
+            throw new IllegalStateException(AUTHENTICATION_NOT_ENABLED_MSG);
         }
 
         if (!oidcService.isOidcEnabled()) {
-            throw new IllegalStateException("OpenId Connect is not configured.");
+            throw new IllegalStateException(OPEN_ID_CONNECT_SUPPORT_IS_NOT_CONFIGURED_MSG);
         }
 
         // Get the OIDC end session endpoint
@@ -388,13 +389,13 @@ public class AccessResource extends ApplicationResource {
     public void oidcLogoutCallback(@Context HttpServletRequest httpServletRequest, @Context HttpServletResponse httpServletResponse) throws Exception {
         // only consider user specific access over https
         if (!httpServletRequest.isSecure()) {
-            forwardToMessagePage(httpServletRequest, httpServletResponse, "User authentication/authorization is only supported when running over HTTPS.");
+            forwardToMessagePage(httpServletRequest, httpServletResponse, AUTHENTICATION_NOT_ENABLED_MSG);
             return;
         }
 
         // ensure oidc is enabled
         if (!oidcService.isOidcEnabled()) {
-            forwardToMessagePage(httpServletRequest, httpServletResponse, "OpenId Connect is not configured.");
+            forwardToMessagePage(httpServletRequest, httpServletResponse, OPEN_ID_CONNECT_SUPPORT_IS_NOT_CONFIGURED_MSG);
             return;
         }
 
@@ -471,7 +472,6 @@ public class AccessResource extends ApplicationResource {
                             .build();
 
                     Request request = new Request.Builder()
-//                            .url("https://accounts.google.com/o/oauth2/revoke")
                             .url(Objects.requireNonNull(HttpUrl.get(revokeEndpoint)))
                             .post(formBody)
                             .build();
@@ -495,11 +495,12 @@ public class AccessResource extends ApplicationResource {
                         // TODO: Redirect to a NiFi logout page
 //                        String postLogoutRedirectUri = generateResourceUri("..", "nifi");
 //                        String postLogoutRedirectUri = "https://www.google.com/";
-                        String postLogoutRedirectUri = generateResourceUri("..", "access", "logout");
+                        String postLogoutRedirectUri = generateResourceUri("..", "nifi-api", "access", "logout");
                         logger.info("**NOW REDIRECTING TO : " + postLogoutRedirectUri);
                         httpServletResponse.sendRedirect(postLogoutRedirectUri);
                     }
                 } catch (IOException e) {
+                    // TODO: Fix this Exception message
                     logger.info("oidc/logoutCallback Response error: " + e);
                     throw new IOException("oidc/logoutCallback Response error: " + e);
                 }
@@ -559,7 +560,7 @@ public class AccessResource extends ApplicationResource {
     public void knoxCallback(@Context HttpServletRequest httpServletRequest, @Context HttpServletResponse httpServletResponse) throws Exception {
         // only consider user specific access over https
         if (!httpServletRequest.isSecure()) {
-            forwardToMessagePage(httpServletRequest, httpServletResponse, "User authentication/authorization is only supported when running over HTTPS.");
+            forwardToMessagePage(httpServletRequest, httpServletResponse, AUTHENTICATION_NOT_ENABLED_MSG);
             return;
         }
 
@@ -933,7 +934,7 @@ public class AccessResource extends ApplicationResource {
     )
     public Response logOut(@Context HttpServletRequest httpServletRequest, @Context HttpServletResponse httpServletResponse) {
         if (!httpServletRequest.isSecure()) {
-            throw new IllegalStateException("User authentication/authorization is only supported when running over HTTPS.");
+            throw new IllegalStateException(AUTHENTICATION_NOT_ENABLED_MSG);
         }
 
         String userIdentity = NiFiUserUtils.getNiFiUserIdentity();
