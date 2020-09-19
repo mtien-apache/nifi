@@ -35,6 +35,8 @@ import java.security.cert.X509Certificate;
 import java.util.Objects;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import javax.servlet.ServletContext;
 import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
@@ -115,6 +117,9 @@ public class AccessResource extends ApplicationResource {
     private static final String OPEN_ID_CONNECT_SUPPORT_IS_NOT_CONFIGURED_MSG = "OpenId Connect support is not configured";
 
     private static final String AUTHENTICATION_NOT_ENABLED_MSG = "User authentication/authorization is only supported when running over HTTPS.";
+
+    private static final Pattern ACCESS_TOKEN_LOGOUT_FORMAT = Pattern.compile("(.google.com)");
+    private static final Pattern ID_TOKEN_LOGOUT_FORMAT = Pattern.compile("(.okta)");
 
     private X509CertificateExtractor certificateExtractor;
     private X509AuthenticationProvider x509AuthenticationProvider;
@@ -354,28 +359,52 @@ public class AccessResource extends ApplicationResource {
             throw new IllegalStateException(OPEN_ID_CONNECT_SUPPORT_IS_NOT_CONFIGURED_MSG);
         }
 
-        // Get the OIDC end session endpoint
-        URI endSessionEndpoint = oidcService.getEndSessionEndpoint();
-        String postLogoutRedirectUri = generateResourceUri("..", "nifi");
+        // New oidc logout process:
+        // (public interface oidcLogoutProviderFunctionalInterface() ?)
+        // Make 3 new logout methods - accessTokenRequiredLogout(), idTokenRequiredLogout(), standardLogout()
+        // Get the oidc discovery url from nifi.properties
+        // Depending on which IdP is configured, use one of the 3 appropriate logout methods
 
-        // First, try the end session endpoint
-        if (endSessionEndpoint != null) {
-            URI logoutUri = UriBuilder.fromUri(endSessionEndpoint)
-                    .queryParam("post_logout_redirect_uri", postLogoutRedirectUri)
-                    .build();
-            httpServletResponse.sendRedirect(logoutUri.toString());
-        } else {
-            // If end session endpoint is null, then try the revocation endpoint
-            URI revokeEndpoint = getRevokeEndpoint();
-            if (revokeEndpoint != null) {
+        // if (Google) { accessTokenRequiredLogout() }
+        // else if (Okta) { idTokenRequiredLogout() }
+        // else { standardLogout() } <-- Azure & everyone else
 
-                // Request an access token to use for the revoke endpoint
-                URI authorizationURI = oidcRequestAuthorizationCode(httpServletResponse, getOidcLogoutCallback());
 
-                httpServletResponse.sendRedirect(authorizationURI.toString());
-            }
+        // Get the oidc discovery url
+        String oidcDiscoveryUrl = properties.getOidcDiscoveryUrl();
+
+        // Determine which logout method to use by searching for "google" or "okta"
+        String logoutMethod = determineLogoutMethod(oidcDiscoveryUrl);
+
+        switch (logoutMethod) {
+            case "access_token_logout":
+                // accessTokenRequiredLogout()
+
+                URI revokeEndpoint = getRevokeEndpoint();
+                if (revokeEndpoint != null) {
+                    // Request an access token to use for the revoke endpoint
+                    URI authorizationURI = oidcRequestAuthorizationCode(httpServletResponse, getOidcLogoutCallback());
+                    httpServletResponse.sendRedirect(authorizationURI.toString());
+                }
+                break;
+            case "id_token_logout":
+                // idTokenRequiredLogout()
+                break;
+            case "standard_logout":
+                // standardLogout()
+
+                // Get the OIDC end session endpoint
+                URI endSessionEndpoint = oidcService.getEndSessionEndpoint();
+                String postLogoutRedirectUri = generateResourceUri("..", "nifi");
+
+                if (endSessionEndpoint != null) {
+                    URI logoutUri = UriBuilder.fromUri(endSessionEndpoint)
+                            .queryParam("post_logout_redirect_uri", postLogoutRedirectUri)
+                            .build();
+                    httpServletResponse.sendRedirect(logoutUri.toString());
+                }
+                break;
         }
-
     }
 
     @GET
@@ -492,10 +521,11 @@ public class AccessResource extends ApplicationResource {
 
                         logger.info("**RESPONSE: " + response + ". LOG OUT RESPONSE IS A SUCCESS.");
 
-                        // TODO: Redirect to a NiFi logout page
+                        // TODO: Redirect to a NiFi logout page (create jsp)
 //                        String postLogoutRedirectUri = generateResourceUri("..", "nifi");
-//                        String postLogoutRedirectUri = "https://www.google.com/";
-                        String postLogoutRedirectUri = generateResourceUri("..", "nifi-api", "access", "logout");
+//                        String postLogoutRedirectUri = generateResourceUri("..", "nifi-api", "access", "logout");
+                        // Temporary redirect page to demonstrate a complete logout
+                        String postLogoutRedirectUri = "https://www.google.com/";
                         logger.info("**NOW REDIRECTING TO : " + postLogoutRedirectUri);
                         httpServletResponse.sendRedirect(postLogoutRedirectUri);
                     }
@@ -1023,6 +1053,19 @@ public class AccessResource extends ApplicationResource {
 
         final ServletContext uiContext = httpServletRequest.getServletContext().getContext("/nifi");
         uiContext.getRequestDispatcher("/WEB-INF/pages/message-page.jsp").forward(httpServletRequest, httpServletResponse);
+    }
+
+    private String determineLogoutMethod(String oidcDiscoveryUrl) {
+        Matcher accessTokenMatcher = ACCESS_TOKEN_LOGOUT_FORMAT.matcher(oidcDiscoveryUrl);
+        Matcher idTokenMatcher = ID_TOKEN_LOGOUT_FORMAT.matcher(oidcDiscoveryUrl);
+
+        if (accessTokenMatcher.find()) {
+            return "access_token_logout";
+        } else if (idTokenMatcher.find()) {
+            return "id_token_logout";
+        } else {
+            return "standard_logout";
+        }
     }
 
     private URI oidcRequestAuthorizationCode(@Context HttpServletResponse httpServletResponse, String callback) {
