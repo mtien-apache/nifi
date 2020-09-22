@@ -272,7 +272,6 @@ public class StandardOidcIdentityProvider implements OidcIdentityProvider {
         if (!isOidcEnabled()) {
             throw new IllegalStateException(OPEN_ID_CONNECT_SUPPORT_IS_NOT_CONFIGURED);
         }
-
         return oidcProviderMetadata.getAuthorizationEndpointURI();
     }
 
@@ -290,14 +289,6 @@ public class StandardOidcIdentityProvider implements OidcIdentityProvider {
             throw new IllegalStateException(OPEN_ID_CONNECT_SUPPORT_IS_NOT_CONFIGURED);
         }
         return oidcProviderMetadata.getRevocationEndpointURI();
-    }
-
-    @Override
-    public boolean supportsBackChannelLogout() {
-        if (!isOidcEnabled()) {
-            throw new IllegalStateException(OPEN_ID_CONNECT_SUPPORT_IS_NOT_CONFIGURED);
-        }
-        return oidcProviderMetadata.supportsBackChannelLogout();
     }
 
     @Override
@@ -321,11 +312,10 @@ public class StandardOidcIdentityProvider implements OidcIdentityProvider {
         if (!isOidcEnabled()) {
             throw new IllegalStateException(OPEN_ID_CONNECT_SUPPORT_IS_NOT_CONFIGURED);
         }
-
         return clientId;
     }
 
-    // TODO: combine the two exchangeAuthorizationCode methods
+    // TODO: separate authorizeClient() from exchange methods?
     @Override
     public LoginAuthenticationToken exchangeAuthorizationCodeforLoginAuthenticationToken(final AuthorizationGrant authorizationGrant) throws IOException {
         // Check if OIDC is enabled
@@ -337,7 +327,7 @@ public class StandardOidcIdentityProvider implements OidcIdentityProvider {
             // Authenticate and authorize the client request
             final TokenResponse response = authorizeClient(authorizationGrant);
 
-            // Convert response to Login Authentication token
+            // Convert response to Login Authentication Token
             // We only want to do this for login
             return convertOIDCTokenToLoginAuthenticationToken((OIDCTokenResponse) response);
 
@@ -356,7 +346,7 @@ public class StandardOidcIdentityProvider implements OidcIdentityProvider {
         try {
             // Authenticate and authorize the client request
             final TokenResponse response = authorizeClient(authorizationGrant);
-            return getAccessToken((OIDCTokenResponse) response);
+            return getAccessTokenString((OIDCTokenResponse) response);
 
         } catch (final ParseException | IOException | java.text.ParseException | InvalidHashException e) {
             throw new RuntimeException("Unable to parse the response from the Token request: " + e.getMessage());
@@ -380,7 +370,7 @@ public class StandardOidcIdentityProvider implements OidcIdentityProvider {
         }
     }
 
-    private String getAccessToken(final OIDCTokenResponse response) throws java.text.ParseException, InvalidHashException {
+    private String getAccessTokenString(final OIDCTokenResponse response) throws java.text.ParseException, InvalidHashException {
         final OIDCTokens oidcTokens = getOidcTokens(response);
 
         // Get the Access Token to validate
@@ -478,7 +468,6 @@ public class StandardOidcIdentityProvider implements OidcIdentityProvider {
         // Convert into a NiFi JWT for retrieval later
         final LoginAuthenticationToken loginToken = new LoginAuthenticationToken(identity, identity, expiresIn,
                 claimsSet.getIssuer().getValue());
-//        return jwtService.generateSignedToken(loginToken);
         return loginToken;
     }
 
@@ -487,14 +476,14 @@ public class StandardOidcIdentityProvider implements OidcIdentityProvider {
     }
 
     private String retrieveIdentityFromUserInfoEndpoint(OIDCTokens oidcTokens) throws IOException {
-        // explicitly try to get the identity from the UserInfo endpoint with the configured claim
-        // extract the bearer access token
+        // Explicitly try to get the identity from the UserInfo endpoint with the configured claim
+        // Extract the bearer access token
         final BearerAccessToken bearerAccessToken = oidcTokens.getBearerAccessToken();
         if (bearerAccessToken == null) {
             throw new IllegalStateException("No access token found in the ID tokens");
         }
 
-        // invoke the UserInfo endpoint
+        // Invoke the UserInfo endpoint
         HTTPRequest userInfoRequest = createUserInfoRequest(bearerAccessToken);
         return lookupIdentityInUserInfo(userInfoRequest);
     }
@@ -543,10 +532,6 @@ public class StandardOidcIdentityProvider implements OidcIdentityProvider {
         // no nonce required for authorization code flow
         return tokenValidator.validate(oidcJwt, null);
     }
-
-//    private void validateAccessToken(final AccessToken accessToken, final String accessTokenHash) throws InvalidHashException {
-//
-//    }
 
     private String lookupIdentityInUserInfo(final HTTPRequest userInfoHttpRequest) throws IOException {
         try {

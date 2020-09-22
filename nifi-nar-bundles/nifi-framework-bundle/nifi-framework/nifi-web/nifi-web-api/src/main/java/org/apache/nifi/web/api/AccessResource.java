@@ -118,11 +118,11 @@ public class AccessResource extends ApplicationResource {
     private static final String REVOKE_ACCESS_TOKEN_LOGOUT = "oidc_access_token_logout";
     private static final String ID_TOKEN_LOGOUT = "oidc_id_token_logout";
     private static final String STANDARD_LOGOUT = "oidc_standard_logout";
+    private static final Pattern REVOKE_ACCESS_TOKEN_LOGOUT_FORMAT = Pattern.compile("(.google.com)");
+    private static final Pattern ID_TOKEN_LOGOUT_FORMAT = Pattern.compile("(.okta)");
 
     private static final String AUTHENTICATION_NOT_ENABLED_MSG = "User authentication/authorization is only supported when running over HTTPS.";
 
-    private static final Pattern ACCESS_TOKEN_LOGOUT_FORMAT = Pattern.compile("(.google.com)");
-    private static final Pattern ID_TOKEN_LOGOUT_FORMAT = Pattern.compile("(.okta)");
 
     private X509CertificateExtractor certificateExtractor;
     private X509AuthenticationProvider x509AuthenticationProvider;
@@ -363,40 +363,36 @@ public class AccessResource extends ApplicationResource {
         }
 
         // New oidc logout process:
-        // (public interface oidcLogoutProviderFunctionalInterface() ?)
-        // Make 3 new logout methods - accessTokenRequiredLogout(), idTokenRequiredLogout(), standardLogout()
-        // Get the oidc discovery url from nifi.properties
-        // Depending on which IdP is configured, use one of the 3 appropriate logout methods
+        // 1. Make 3 new logout methods - accessTokenRequiredLogout(), idTokenRequiredLogout(), standardLogout()
+        // 2. Get the oidc discovery url from nifi.properties
+        // 3. Depending on which IdP is configured, use one of the 3 appropriate logout methods
 
         // if (Google) { accessTokenRequiredLogout() }
         // else if (Okta) { idTokenRequiredLogout() }
         // else { standardLogout() } <-- Azure & everyone else
 
+        // 4. Make a functional interface?
 
         // Get the oidc discovery url
         String oidcDiscoveryUrl = properties.getOidcDiscoveryUrl();
 
-        // Determine which logout method to use by searching for "google" or "okta"
+        // Determine the logout method
         String logoutMethod = determineLogoutMethod(oidcDiscoveryUrl);
 
         switch (logoutMethod) {
             case REVOKE_ACCESS_TOKEN_LOGOUT:
             case ID_TOKEN_LOGOUT:
-                // accessTokenRequiredLogout()
                 // Make a request to the IdP
                 URI authorizationURI = oidcRequestAuthorizationCode(httpServletResponse, getOidcLogoutCallback());
                 httpServletResponse.sendRedirect(authorizationURI.toString());
-
                 break;
             case STANDARD_LOGOUT:
             default:
-                // standardLogout()
-
                 // Get the OIDC end session endpoint
                 URI endSessionEndpoint = oidcService.getEndSessionEndpoint();
-                String postLogoutRedirectUri = generateResourceUri("..", "nifi");
 
                 if (endSessionEndpoint != null) {
+                    String postLogoutRedirectUri = generateResourceUri("..", "nifi");
                     URI logoutUri = UriBuilder.fromUri(endSessionEndpoint)
                             .queryParam("post_logout_redirect_uri", postLogoutRedirectUri)
                             .build();
@@ -426,13 +422,6 @@ public class AccessResource extends ApplicationResource {
             forwardToMessagePage(httpServletRequest, httpServletResponse, OPEN_ID_CONNECT_SUPPORT_IS_NOT_CONFIGURED_MSG);
             return;
         }
-
-        // receive the authorization code
-        // exchange it for JWT
-        // get the access token
-        // build the revoke URI
-        // send the request to revoke the token
-        // TODO: revoke or delete the NiFi JWT
 
         final String oidcRequestIdentifier = getCookieValue(httpServletRequest.getCookies(), OIDC_REQUEST_IDENTIFIER);
         if (oidcRequestIdentifier == null) {
@@ -482,7 +471,7 @@ public class AccessResource extends ApplicationResource {
 
             switch (logoutMethod) {
                 case REVOKE_ACCESS_TOKEN_LOGOUT:
-                    // accessTokenRequiredLogout()
+                    // Revocation endpoint + access token
 
                     final String accessToken;
                     try {
@@ -531,7 +520,7 @@ public class AccessResource extends ApplicationResource {
                     }
                     break;
                 case ID_TOKEN_LOGOUT:
-                    // IdTokenRequiredLogout()
+                    // End session endpoint + ID Token
                     final String idToken;
                     try {
                         // Returns the ID Token
@@ -549,9 +538,9 @@ public class AccessResource extends ApplicationResource {
 
                     // Get the OIDC end session endpoint
                     URI endSessionEndpoint = oidcService.getEndSessionEndpoint();
-                    String postLogoutRedirectUri = generateResourceUri("..", "nifi");
 
                     if (endSessionEndpoint != null) {
+                        String postLogoutRedirectUri = generateResourceUri("..", "nifi");
                         URI logoutUri = UriBuilder.fromUri(endSessionEndpoint)
                                 .queryParam("id_token_hint", idToken)
                                 .queryParam("post_logout_redirect_uri", postLogoutRedirectUri)
@@ -1080,7 +1069,7 @@ public class AccessResource extends ApplicationResource {
     }
 
     private String determineLogoutMethod(String oidcDiscoveryUrl) {
-        Matcher accessTokenMatcher = ACCESS_TOKEN_LOGOUT_FORMAT.matcher(oidcDiscoveryUrl);
+        Matcher accessTokenMatcher = REVOKE_ACCESS_TOKEN_LOGOUT_FORMAT.matcher(oidcDiscoveryUrl);
         Matcher idTokenMatcher = ID_TOKEN_LOGOUT_FORMAT.matcher(oidcDiscoveryUrl);
 
         if (accessTokenMatcher.find()) {
