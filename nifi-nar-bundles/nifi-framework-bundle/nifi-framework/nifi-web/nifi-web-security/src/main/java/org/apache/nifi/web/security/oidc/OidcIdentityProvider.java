@@ -69,13 +69,6 @@ public interface OidcIdentityProvider {
     URI getRevocationEndpoint();
 
     /**
-     * Returns {@code true} if back-channel logout is supported.
-     *
-     * @return true if back-channel logout is supported
-     */
-    boolean supportsBackChannelLogout();
-
-    /**
      * Returns the scopes supported by the OIDC provider.
      *
      * @return support scopes
