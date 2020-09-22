@@ -365,28 +365,6 @@ public class AccessResource extends ApplicationResource {
             throw new IllegalStateException(OPEN_ID_CONNECT_SUPPORT_IS_NOT_CONFIGURED_MSG);
         }
 
-//        // Get the OIDC end session endpoint
-//        URI endSessionEndpoint = oidcService.getEndSessionEndpoint();
-//        String postLogoutRedirectUri = generateResourceUri("..", "nifi", "logout-complete");
-//
-//        // First, try the end session endpoint
-//        if (endSessionEndpoint != null) {
-//            URI logoutUri = UriBuilder.fromUri(endSessionEndpoint)
-//                    .queryParam("post_logout_redirect_uri", postLogoutRedirectUri)
-//                    .build();
-//            httpServletResponse.sendRedirect(logoutUri.toString());
-//        } else {
-//            // If end session endpoint is null, then try the revocation endpoint
-//            URI revokeEndpoint = getRevokeEndpoint();
-//            if (revokeEndpoint != null) {
-//
-//                // Request an access token to use for the revoke endpoint
-//                URI authorizationURI = oidcRequestAuthorizationCode(httpServletResponse, getOidcLogoutCallback());
-//
-//                httpServletResponse.sendRedirect(authorizationURI.toString());
-//            }
-//        }
-
         // Get the oidc discovery url
         String oidcDiscoveryUrl = properties.getOidcDiscoveryUrl();
 
@@ -475,78 +453,6 @@ public class AccessResource extends ApplicationResource {
                 return;
             }
 
-//            final String accessToken;
-//            try {
-//                // exchange authorization code for access token
-//                final AuthorizationCode authorizationCode = successfulOidcResponse.getAuthorizationCode();
-//                final AuthorizationGrant authorizationGrant = new AuthorizationCodeGrant(authorizationCode, URI.create(getOidcLogoutCallback()));
-//                // returns the access token
-//                accessToken = oidcService.exchangeAuthorizationCodeForAccessToken(authorizationGrant);
-//
-//            } catch (final Exception e) {
-//                logger.error("Unable to exchange authorization for the Access token: " + e.getMessage(), e);
-//
-//                // remove the oidc request cookie
-//                removeOidcRequestCookie(httpServletResponse);
-//
-//                // forward to the error page
-//                forwardToMessagePage(httpServletRequest, httpServletResponse, "Unable to exchange authorization for ID token: " + e.getMessage());
-//                return;
-//            }
-//
-//            // build the revoke URI and send the POST request
-//            URI revokeEndpoint = getRevokeEndpoint();
-//            if (revokeEndpoint != null) {
-//                try {
-//                    OkHttpClient client = new OkHttpClient();
-//
-//                    RequestBody formBody = new FormBody.Builder()
-//                            .add("token", accessToken)
-//                            .build();
-//
-//                    Request request = new Request.Builder()
-//                            .url(Objects.requireNonNull(HttpUrl.get(revokeEndpoint)))
-//                            .post(formBody)
-//                            .build();
-//
-//                    Call call = client.newCall(request);
-//                    okhttp3.Response response = call.execute();
-//
-//                    if (response.isSuccessful()) {
-//                        // TODO: Delete the NiFi JWT
-////                        try {
-////                            logger.info("Logging out user");
-////                            jwtService.logOutUsingAuthHeader(httpServletRequest.getHeader(JwtAuthenticationFilter.AUTHORIZATION));
-////                            logger.info("Successfully logged out user");
-////                        } catch (final JwtException e) {
-////                            logger.error("Logout of user failed due to: " + e.getMessage());
-//////                            return Response.serverError().build();
-////                        }
-//
-//                        logger.info("**RESPONSE: " + response + ". LOG OUT RESPONSE IS A SUCCESS.");
-//
-//                        // TODO: Redirect to a NiFi logout page
-////                        String postLogoutRedirectUri = generateResourceUri("..", "nifi");
-////                        String postLogoutRedirectUri = "https://www.google.com/";
-//                        String postLogoutRedirectUri = generateResourceUri("..", "nifi-api", "access", "logout");
-//                        logger.info("**NOW REDIRECTING TO : " + postLogoutRedirectUri);
-//                        httpServletResponse.sendRedirect(postLogoutRedirectUri);
-//                    }
-//                } catch (IOException e) {
-//                    // TODO: Fix this Exception message
-//                    logger.info("oidc/logoutCallback Response error: " + e);
-//                    throw new IOException("oidc/logoutCallback Response error: " + e);
-//                }
-//            }
-//
-//        } else {
-//            // remove the oidc request cookie
-//            removeOidcRequestCookie(httpServletResponse);
-//
-//            // report the unsuccessful logout
-//            final AuthenticationErrorResponse errorOidcResponse = (AuthenticationErrorResponse) oidcResponse;
-//            forwardToMessagePage(httpServletRequest, httpServletResponse, "Unsuccessful logout attempt: " + errorOidcResponse.getErrorObject().getDescription());
-
             // Get the oidc discovery url
             String oidcDiscoveryUrl = properties.getOidcDiscoveryUrl();
 
@@ -567,8 +473,8 @@ public class AccessResource extends ApplicationResource {
                     } catch (final Exception e) {
                         logger.error("Unable to exchange authorization for the Access token: " + e.getMessage(), e);
 
-                        // Remove the oidc request cookie
-                        removeOidcRequestCookie(httpServletResponse);
+                // remove the oidc request cookie
+                removeOidcRequestCookie(httpServletResponse);
 
                         // Forward to the error page
                         forwardToMessagePage(httpServletRequest, httpServletResponse, "Unable to exchange " +
@@ -611,7 +517,6 @@ public class AccessResource extends ApplicationResource {
                                             "Response status: " + response.getStatusLine().getStatusCode());
                                 }
                             }
-
                         } catch (final IOException e) {
                             logger.error("There was an error logging out of the OpenId Connect Provider: "
                                     + e.getMessage(), e);
