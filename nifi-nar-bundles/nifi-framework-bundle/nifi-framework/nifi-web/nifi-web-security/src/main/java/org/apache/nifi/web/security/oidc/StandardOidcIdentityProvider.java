@@ -337,7 +337,7 @@ public class StandardOidcIdentityProvider implements OidcIdentityProvider {
     }
 
     @Override
-    public String exchangeAuthorizationCodeForAccessToken(final AuthorizationGrant authorizationGrant) {
+    public String exchangeAuthorizationCodeForAccessToken(final AuthorizationGrant authorizationGrant) throws Exception {
         // Check if OIDC is enabled
         if (!isOidcEnabled()) {
             throw new IllegalStateException(OPEN_ID_CONNECT_SUPPORT_IS_NOT_CONFIGURED);
@@ -370,26 +370,14 @@ public class StandardOidcIdentityProvider implements OidcIdentityProvider {
         }
     }
 
-    private String getAccessTokenString(final OIDCTokenResponse response) throws java.text.ParseException, InvalidHashException {
+    private String getAccessTokenString(final OIDCTokenResponse response) throws Exception {
         final OIDCTokens oidcTokens = getOidcTokens(response);
 
         // Get the Access Token to validate
         final AccessToken accessToken = oidcTokens.getAccessToken();
 
-        // Get the preferredJwsAlgorithm for validation
-        final JWSAlgorithm jwsAlgorithm = extractJwsAlgorithm();
-
-        // Get the accessTokenHash for validation
-        final String atHashString = oidcTokens
-                .getIDToken()
-                .getJWTClaimsSet()
-                .getStringClaim("at_hash");
-
-        // Compute the Access Token hash
-        final AccessTokenHash atHash = new AccessTokenHash(atHashString);
-
-        // Validate the Token
-        AccessTokenValidator.validate(accessToken, jwsAlgorithm, atHash);
+        // Validate the Access Token
+        validateAccessToken(oidcTokens);
 
         // Return the Access Token string
         return accessToken.getValue();
@@ -399,7 +387,7 @@ public class StandardOidcIdentityProvider implements OidcIdentityProvider {
         final OIDCTokens oidcTokens = getOidcTokens(response);
 
         // Validate the Token - no nonce required for authorization code flow
-        validateIdToken(oidcTokens.getIDToken());
+        final IDTokenClaimsSet idTokenClaimsSet = validateIdToken(oidcTokens.getIDToken());
 
         // Return the ID Token string
         return oidcTokens.getIDTokenString();
@@ -466,8 +454,8 @@ public class StandardOidcIdentityProvider implements OidcIdentityProvider {
         final long expiresIn = expiration.getTime() - now.getTimeInMillis();
 
         // Convert into a NiFi JWT for retrieval later
-        final LoginAuthenticationToken loginToken = new LoginAuthenticationToken(identity, identity, expiresIn,
-                claimsSet.getIssuer().getValue());
+        final LoginAuthenticationToken loginToken = new LoginAuthenticationToken(
+                identity, identity, expiresIn, claimsSet.getIssuer().getValue());
         return loginToken;
     }
 
@@ -528,8 +516,31 @@ public class StandardOidcIdentityProvider implements OidcIdentityProvider {
         return presentClaims;
     }
 
+    private void validateAccessToken(OIDCTokens oidcTokens) throws Exception {
+        // Get the Access Token to validate
+        final AccessToken accessToken = oidcTokens.getAccessToken();
+
+        // Get the preferredJwsAlgorithm for validation
+        final JWSAlgorithm jwsAlgorithm = extractJwsAlgorithm();
+
+        // Get the accessTokenHash for validation
+        final String atHashString = oidcTokens
+                .getIDToken()
+                .getJWTClaimsSet()
+                .getStringClaim("at_hash");
+
+        // Compute the Access Token hash
+        final AccessTokenHash atHash = new AccessTokenHash(atHashString);
+
+        try {
+            // Validate the Token
+            AccessTokenValidator.validate(accessToken, jwsAlgorithm, atHash);
+        } catch (InvalidHashException e) {
+            throw new Exception("Unable to validate the Access Token: " + e.getMessage());
+        }
+    }
+
     private IDTokenClaimsSet validateIdToken(JWT oidcJwt) throws BadJOSEException, JOSEException {
-        // no nonce required for authorization code flow
         return tokenValidator.validate(oidcJwt, null);
     }
 
