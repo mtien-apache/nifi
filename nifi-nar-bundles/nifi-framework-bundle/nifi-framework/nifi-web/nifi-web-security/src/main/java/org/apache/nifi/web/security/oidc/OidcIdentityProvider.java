@@ -91,7 +91,7 @@ public interface OidcIdentityProvider {
      * @param authorizationGrant authorization grant for invoking the Token Endpoint
      * @return an Access Token String
      */
-    String exchangeAuthorizationCodeForAccessToken(AuthorizationGrant authorizationGrant);
+    String exchangeAuthorizationCodeForAccessToken(AuthorizationGrant authorizationGrant) throws Exception;
 
     /**
      * Exchanges the supplied authorization grant for an ID Token.

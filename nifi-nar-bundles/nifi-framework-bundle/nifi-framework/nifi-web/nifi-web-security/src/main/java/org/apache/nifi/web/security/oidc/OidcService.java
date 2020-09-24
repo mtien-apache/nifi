@@ -217,7 +217,7 @@ public class OidcService {
      * @param authorizationGrant authorization grant
      * @return an Access Token string
      */
-    public String exchangeAuthorizationCodeForAccessToken(final AuthorizationGrant authorizationGrant) {
+    public String exchangeAuthorizationCodeForAccessToken(final AuthorizationGrant authorizationGrant) throws Exception {
         if (!isOidcEnabled()) {
             throw new IllegalStateException(OPEN_ID_CONNECT_SUPPORT_IS_NOT_CONFIGURED);
         }
