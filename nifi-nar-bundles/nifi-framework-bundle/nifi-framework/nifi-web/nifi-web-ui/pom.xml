@@ -102,6 +102,7 @@
                                 **/users.jsp,
                                 **/bulletin-board.jsp,
                                 **/login.jsp
+                                **/logout.jsp
                             </excludes>
                         </configuration>
                     </execution>
@@ -359,6 +360,14 @@
                             <targetPath>WEB-INF/pages</targetPath>
                             <includes>
                                 <include>login.jsp</include>
+                            </includes>
+                            <filtering>true</filtering>
+                        </resource>
+                        <resource>
+                            <directory>src/main/webapp/WEB-INF/pages</directory>
+                            <targetPath>WEB-INF/pages</targetPath>
+                            <includes>
+                                <include>logout.jsp</include>
                             </includes>
                             <filtering>true</filtering>
                         </resource>
