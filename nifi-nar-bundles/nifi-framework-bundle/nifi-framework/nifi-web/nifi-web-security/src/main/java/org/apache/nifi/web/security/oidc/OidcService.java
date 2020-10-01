@@ -245,7 +245,7 @@ public class OidcService {
         final CacheKey oidcRequestIdentifierKey = new CacheKey(oidcRequestIdentifier);
         // TODO: come back to this
         try {
-            // cache the jwt for later retrieval
+            // Cache the jwt for later retrieval
             synchronized (jwtLookupForCompletedRequests) {
                 final String cachedJwt = jwtLookupForCompletedRequests.get(oidcRequestIdentifierKey, () -> jwt);
                 if (!timeConstantEqualityCheck(jwt, cachedJwt)) {

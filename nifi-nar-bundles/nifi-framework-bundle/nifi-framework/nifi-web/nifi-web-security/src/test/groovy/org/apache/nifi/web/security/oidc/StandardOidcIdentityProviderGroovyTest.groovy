@@ -143,9 +143,9 @@ class StandardOidcIdentityProviderGroovyTest extends GroovyTestCase {
     void testShouldGetAvailableClaims() {
         // Arrange
         final Map<String, String> EXPECTED_CLAIMS = [
-                "iss"           : "https://accounts.google.com",
-                "azp"           : "1013352044499-05pb1ssdfuihsdfsdsdfdi8r2vike88m.apps.googleusercontent.com",
-                "aud"           : "1013352044499-05pb1ssdfuihsdfsdsdfdi8r2vike88m.apps.googleusercontent.com",
+                "iss"           : "https://accounts.issuer.com",
+                "azp"           : "1013352044499-05pb1ssdfuihsdfsdsdfdi8r2vike88m.apps.usercontent.com",
+                "aud"           : "1013352044499-05pb1ssdfuihsdfsdsdfdi8r2vike88m.apps.usercontent.com",
                 "sub"           : "10703475345439756345540",
                 "email"         : "person@nifi.apache.org",
                 "email_verified": "true",
@@ -374,8 +374,8 @@ class StandardOidcIdentityProviderGroovyTest extends GroovyTestCase {
         def (String contents, String expiration) = loginToken.tokenize("\\[\\]")
         logger.info("Token contents: ${contents} | Expiration: ${expiration}")
 
-        assert contents =~ "LoginAuthenticationToken for person@nifi.apache.org issued by https://accounts.google.com expiring at"
-        // TODO: add this assert
+        assert contents =~ "LoginAuthenticationToken for person@nifi\\.apache\\.org issued by https://accounts\\.issuer\\.com expiring at"
+        // TODO: add this assert?
 //        assert expiration <= System.currentTimeMillis() + 10_000
     }
 
@@ -396,7 +396,7 @@ class StandardOidcIdentityProviderGroovyTest extends GroovyTestCase {
         def (String contents, String expiration) = loginToken.tokenize("\\[\\]")
         logger.info("Token contents: ${contents} | Expiration: ${expiration}")
 
-        assert contents =~ "LoginAuthenticationToken for person@nifi.apache.org issued by https://accounts.google.com expiring at"
+        assert contents =~ "LoginAuthenticationToken for person@nifi\\.apache\\.org issued by https://accounts\\.issuer\\.com expiring at"
 
         // Get the expiration
         final ArrayList<String> expires = expiration.split("[\\D*]")
@@ -468,7 +468,7 @@ class StandardOidcIdentityProviderGroovyTest extends GroovyTestCase {
         assert msg =~ "An error occurred while invoking the Token endpoint: null"
     }
 
-    // TODO: Confirm we don't need these tests because it requires a network connection
+    // TODO: Confirm we don't need first 3 tests because it requires a network connection
 //    @Test
 //    void testShouldExchangeAuthorizationCodeForAccessToken() {}
 //
@@ -477,6 +477,13 @@ class StandardOidcIdentityProviderGroovyTest extends GroovyTestCase {
 //
 //    @Test
 //    void testShouldAuthorizeClient() {}
+
+
+//    @Test
+//    void testGetAccessTokenStringShouldHandleError() {}
+
+//    @Test
+//    void testGetIdTokenStringShouldHandleError() {}
 
     @Test
     void testShouldGetAccessTokenString() {
@@ -514,10 +521,6 @@ class StandardOidcIdentityProviderGroovyTest extends GroovyTestCase {
         // Assert
         assert accessTokenString
     }
-
-    // TODO
-//    @Test
-//    void testGetAccessTokenStringShouldHandleError() {}
 
     @Test
     void testShouldValidateAccessToken() {
@@ -635,10 +638,7 @@ class StandardOidcIdentityProviderGroovyTest extends GroovyTestCase {
         assert payloadString =~ "\"email\":\"person@nifi\\.apache\\.org\""
     }
 
-    // TODO
-//    @Test
-//    void testGetIdTokenStringShouldHandleError() {}
-
+    // TODO: Confirm it's validating correctly
     @Test
     void testShouldValidateIdToken() {
         // Arrange
@@ -662,24 +662,24 @@ class StandardOidcIdentityProviderGroovyTest extends GroovyTestCase {
         assert claimsSet
         assert claimsSetString =~ "\"email\":\"person@nifi\\.apache\\.org\""
     }
-        // TODO: Fix test - it should fail
+        // TODO: Fix test - it should fail. It's not going through tokenvalidator.validate
 //    @Test
 //    void testValidateIdTokenShouldHandleExpiredIdToken() {
 //        // Arrange
 //        StandardOidcIdentityProvider soip = buildIdentityProviderWithMockTokenValidator()
+////        StandardOidcIdentityProvider soip = buildIdentityProviderWithMock()
 //
 //        // Create expiration time
 ////        final Calendar now = Calendar.getInstance()
 ////        logger.info("Now time: ${now.getTimeInMillis()}")
-////        final long iat = now.getTimeInMillis()
-////        final long exp = now.getTimeInMillis() - 100_000
-////        Boolean time = iat < exp
-////        logger.info("exp: ${exp}")
+//        final long iat = 1400907145130
+//        final long exp = 1300907145130
 //
 //        // Create mock claim with expired time
+////        final Map<String, Object> claims = emptyMockClaims([:])
 //        final Map<String, Object> claims = mockClaims([
-////                "iat":iat,
-//                "exp":160059023985
+//                "iat":iat,
+//                "exp":exp
 //        ])
 //
 //        // Create Claims Set
@@ -690,14 +690,17 @@ class StandardOidcIdentityProviderGroovyTest extends GroovyTestCase {
 //        JWT mockJwt = new PlainJWT(mockJWTClaimsSet)
 //        logger.info("mockJWT: ${mockJwt.dump()}")
 //
-//            final IDTokenClaimsSet claimsSet = soip.validateIdToken(mockJwt)
-//            final String claimsSetString = claimsSet.toJSONObject().toString()
-//            logger.info("ID Token Claims Set: ${claimsSetString}")
-////        // Act
-////        def
-//          logger.expected(msg)
-////
-////        // Assert
+//        // Act
+//        final IDTokenClaimsSet claimsSet = soip.validateIdToken(mockJwt)
+//        final String claimsSetString = claimsSet.toJSONObject().toString()
+//        logger.info("ID Token Claims Set: ${claimsSetString}")
+//        logger.info("Current time: ${System.currentTimeMillis()} ms")
+//
+////        def(msg) = shouldFail(BadJOSEException) {
+////            soip.validateIdToken(mockJwt)
+////        }
+//
+//        // Assert
 ////        assert msg =~ ""
 //    }
 
@@ -774,6 +777,41 @@ class StandardOidcIdentityProviderGroovyTest extends GroovyTestCase {
             }
         }
         soip.tokenValidator = mockTokenValidator
+        logger.info("Token Validator: ${mockTokenValidator.properties}")
+        logger.info("SOIP: ${soip.properties}")
+        soip
+    }
+
+    private StandardOidcIdentityProvider buildIdentityProviderWithMock(Map<String, String> additionalProperties = [:]) {
+        JwtService mockJS = buildJwtService()
+        NiFiProperties mockNFP = buildNiFiProperties(additionalProperties)
+        StandardOidcIdentityProvider soip = new StandardOidcIdentityProvider(mockJS, mockNFP)
+
+        // Mock OIDC provider metadata
+        Issuer mockIssuer = new Issuer("mockIssuer")
+        URI mockURI = new URI("https://localhost/oidc")
+        OIDCProviderMetadata metadata = new OIDCProviderMetadata(mockIssuer, [SubjectType.PUBLIC], mockURI)
+        soip.oidcProviderMetadata = metadata
+
+        // Set OIDC Provider metadata attributes
+        final ClientID CLIENT_ID = new ClientID("expected_client_id")
+        final Secret CLIENT_SECRET = new Secret("expected_client_secret")
+
+        // Inject into OIP
+        soip.clientId = CLIENT_ID
+        soip.clientSecret = CLIENT_SECRET
+        soip.oidcProviderMetadata["tokenEndpointAuthMethods"] = [ClientAuthenticationMethod.CLIENT_SECRET_BASIC]
+        soip.oidcProviderMetadata["tokenEndpointURI"] = new URI("https://localhost/oidc/token")
+        soip.oidcProviderMetadata["userInfoEndpointURI"] = new URI("https://localhost/oidc/userInfo")
+
+//        // Mock token validator
+//        IDTokenValidator mockTokenValidator = new IDTokenValidator(mockIssuer, CLIENT_ID) {
+//            @Override
+//            IDTokenClaimsSet validate(JWT jwt, Nonce nonce) {
+//                return new IDTokenClaimsSet(jwt.getJWTClaimsSet())
+//            }
+//        }
+//        soip.tokenValidator = mockTokenValidator
         soip
     }
 
@@ -800,15 +838,30 @@ class StandardOidcIdentityProviderGroovyTest extends GroovyTestCase {
 
     private static Map<String, Object> mockClaims(Map<String, Object> additionalClaims = [:]) {
         final Map<String, Object> claims = [
-                "iss"           : "https://accounts.google.com",
-                "azp"           : "1013352044499-05pb1ssdfuihsdfsdsdfdi8r2vike88m.apps.googleusercontent.com",
-                "aud"           : "1013352044499-05pb1ssdfuihsdfsdsdfdi8r2vike88m.apps.googleusercontent.com",
+                "iss"           : "https://accounts.issuer.com",
+                "azp"           : "1013352044499-05pb1ssdfuihsdfsdsdfdi8r2vike88m.apps.usercontent.com",
+                "aud"           : "1013352044499-05pb1ssdfuihsdfsdsdfdi8r2vike88m.apps.usercontent.com",
                 "sub"           : "10703475345439756345540",
                 "email"         : "person@nifi.apache.org",
                 "email_verified": "true",
                 "at_hash"       : "JOGISUDHFiyGHDSFwV5Fah2A",
                 "iat"           : 1590022674,
                 "exp"           : 1590026274
+        ] + additionalClaims
+        claims
+    }
+
+    private static Map<String, Object> emptyMockClaims(Map<String, Object> additionalClaims = [:]) {
+        final Map<String, Object> claims = [
+                "iss"           : "",
+                "azp"           : "",
+                "aud"           : "",
+                "sub"           : "",
+                "email"         : "",
+                "email_verified": "",
+                "at_hash"       : "",
+                "iat"           : "",
+                "exp"           : ""
         ] + additionalClaims
         claims
     }
