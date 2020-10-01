@@ -97,7 +97,6 @@ class OidcServiceGroovyTest extends GroovyTestCase {
             String generateSignedToken(LoginAuthenticationToken lat) {
                 signNiFiToken(lat)
             }
-
         }
         mockJS
     }

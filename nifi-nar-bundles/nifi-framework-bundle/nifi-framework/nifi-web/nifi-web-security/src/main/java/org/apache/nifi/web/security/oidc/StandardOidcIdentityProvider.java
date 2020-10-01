@@ -315,7 +315,6 @@ public class StandardOidcIdentityProvider implements OidcIdentityProvider {
         return clientId;
     }
 
-    // TODO: separate authorizeClient() from exchange methods?
     @Override
     public LoginAuthenticationToken exchangeAuthorizationCodeforLoginAuthenticationToken(final AuthorizationGrant authorizationGrant) throws IOException {
         // Check if OIDC is enabled
@@ -373,21 +372,18 @@ public class StandardOidcIdentityProvider implements OidcIdentityProvider {
     private String getAccessTokenString(final OIDCTokenResponse response) throws Exception {
         final OIDCTokens oidcTokens = getOidcTokens(response);
 
-        // Get the Access Token to validate
-        final AccessToken accessToken = oidcTokens.getAccessToken();
-
         // Validate the Access Token
         validateAccessToken(oidcTokens);
 
-        // Return the Access Token string
-        return accessToken.getValue();
+        // Return the Access Token String
+        return oidcTokens.getAccessToken().getValue();
     }
 
     private String getIdTokenString(OIDCTokenResponse response) throws BadJOSEException, JOSEException {
         final OIDCTokens oidcTokens = getOidcTokens(response);
 
         // Validate the Token - no nonce required for authorization code flow
-        final IDTokenClaimsSet idTokenClaimsSet = validateIdToken(oidcTokens.getIDToken());
+        validateIdToken(oidcTokens.getIDToken());
 
         // Return the ID Token string
         return oidcTokens.getIDTokenString();
@@ -541,7 +537,11 @@ public class StandardOidcIdentityProvider implements OidcIdentityProvider {
     }
 
     private IDTokenClaimsSet validateIdToken(JWT oidcJwt) throws BadJOSEException, JOSEException {
-        return tokenValidator.validate(oidcJwt, null);
+        try {
+            return tokenValidator.validate(oidcJwt, null);
+        } catch (BadJOSEException e) {
+            throw new BadJOSEException("Unable to validate the ID Token: " + e.getMessage());
+        }
     }
 
     private String lookupIdentityInUserInfo(final HTTPRequest userInfoHttpRequest) throws IOException {
