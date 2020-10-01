@@ -196,7 +196,7 @@ public class OidcService {
     }
 
     /**
-     * Exchanges the specified authorization grant for an ID token for the given request identifier.
+     * Exchanges the specified authorization grant for an ID token.
      *
      * @param authorizationGrant authorization grant
      * @return a Login Authentication Token
@@ -241,9 +241,14 @@ public class OidcService {
         return identityProvider.exchangeAuthorizationCodeForIdToken(authorizationGrant);
     }
 
+    /**
+     * Stores the NiFi Jwt.
+     *
+     * @param oidcRequestIdentifier request identifier
+     * @param jwt NiFi JWT
+     */
     public void storeJwt(final String oidcRequestIdentifier, final String jwt) {
         final CacheKey oidcRequestIdentifierKey = new CacheKey(oidcRequestIdentifier);
-        // TODO: come back to this
         try {
             // Cache the jwt for later retrieval
             synchronized (jwtLookupForCompletedRequests) {

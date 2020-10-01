@@ -40,14 +40,6 @@
     font-size: 11px;
 }
 
-.logout-title {
-    font-size: 18px;
-    font-weight: bold;
-    font-family: Roboto Slab;
-    margin-bottom: 10px;
-    color: #728e9b;
-}
-
 #logout-user-links-container {
     position: absolute;
     top: 0px;
@@ -56,38 +48,4 @@
     padding-left: 100px;
     z-index: 1300;
     width: 412px;
-}
-
-#logout-user-links {
-    float: right;
-}
-
-/*
-    Login
-*/
-
-body.logout-body input, body.logout-body textarea {
-    width: 412px;
-}
-
-div.logout-container {
-    width: 412px;
-}
-
-/*
-    Login Progress
-*/
-
-#logout-progress-label {
-    float: right;
-    font-weight: bold;
-    line-height: 16px;
-}
-
-#logout-progress-spinner {
-    float: right;
-    width: 16px;
-    height: 16px;
-    background-color: transparent;
-    margin-left: 3px;
 }

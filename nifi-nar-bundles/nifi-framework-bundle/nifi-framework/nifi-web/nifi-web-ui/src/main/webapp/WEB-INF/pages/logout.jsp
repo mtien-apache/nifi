@@ -45,17 +45,17 @@
         ${nf.logout.script.tags}
     </head>
     <body class="logout-body">
-        <div id="logout-user-links-container">
-            <ul id="logout-user-links" class="links">
-                <li id="user-logout-container" style="display: none;">
-                    <span id="user-logout" class="link">log out</span>
-                </li>
-                <li>
-<%--                    <span id="user-home" class="link">home</span>--%>
-                </li>
-            </ul>
-            <div class="clear"></div>
-        </div>
+<%--        <div id="logout-user-links-container">--%>
+<%--            <ul id="logout-user-links" class="links">--%>
+<%--                <li id="user-logout-container" style="display: none;">--%>
+<%--                    <span id="user-logout" class="link">log out</span>--%>
+<%--                </li>--%>
+<%--                <li>--%>
+<%--&lt;%&ndash;                    <span id="user-home" class="link">home</span>&ndash;%&gt;--%>
+<%--                </li>--%>
+<%--            </ul>--%>
+<%--            <div class="clear"></div>--%>
+<%--        </div>--%>
         <div id="logout-contents-container">
             <jsp:include page="/WEB-INF/partials/logout/logout-message.jsp"/>
         </div>

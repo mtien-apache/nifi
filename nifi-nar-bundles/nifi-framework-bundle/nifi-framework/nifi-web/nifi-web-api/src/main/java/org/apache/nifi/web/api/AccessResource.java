@@ -362,18 +362,6 @@ public class AccessResource extends ApplicationResource {
             throw new IllegalStateException(OPEN_ID_CONNECT_SUPPORT_IS_NOT_CONFIGURED_MSG);
         }
 
-        // New oidc logout process:
-        // 1. Make 3 new logout methods - accessTokenRequiredLogout(), idTokenRequiredLogout(), standardLogout()
-        // 2. Get the oidc discovery url from nifi.properties
-        // 3. Depending on which IdP is configured, use one of the 3 appropriate logout methods
-
-        // if (Google) { accessTokenRequiredLogout() }
-        // else if (Okta) { idTokenRequiredLogout() }
-        // else { standardLogout() } <-- Azure & everyone else.
-        // Possibly combine idTokenRequiredLogout() & standardLogout()
-
-        // 4. Make a functional interface?
-
         // Get the oidc discovery url
         String oidcDiscoveryUrl = properties.getOidcDiscoveryUrl();
 
@@ -389,13 +377,13 @@ public class AccessResource extends ApplicationResource {
                 break;
             case STANDARD_LOGOUT:
             default:
-                // We can possibly have the default Logout to always pass an id_token whether it's required or not
-
                 // Get the OIDC end session endpoint
                 URI endSessionEndpoint = oidcService.getEndSessionEndpoint();
+                String postLogoutRedirectUri = generateResourceUri( "..", "nifi", "logout-complete");
 
-                if (endSessionEndpoint != null) {
-                    String postLogoutRedirectUri = generateResourceUri( "..", "nifi", "logout-complete");
+                if (endSessionEndpoint == null) {
+                    httpServletResponse.sendRedirect(postLogoutRedirectUri);
+                } else {
                     URI logoutUri = UriBuilder.fromUri(endSessionEndpoint)
                             .queryParam("post_logout_redirect_uri", postLogoutRedirectUri)
                             .build();
@@ -410,7 +398,7 @@ public class AccessResource extends ApplicationResource {
     @Produces(MediaType.WILDCARD)
     @Path("oidc/logoutCallback")
     @ApiOperation(
-            value = "Redirect/callback URI for processing the result of the OpenId Connect login sequence.",
+            value = "Redirect/callback URI for processing the result of the OpenId Connect logout sequence.",
             notes = NON_GUARANTEED_ENDPOINT
     )
     public void oidcLogoutCallback(@Context HttpServletRequest httpServletRequest, @Context HttpServletResponse httpServletResponse) throws Exception {
@@ -465,7 +453,7 @@ public class AccessResource extends ApplicationResource {
             // Get the oidc discovery url
             String oidcDiscoveryUrl = properties.getOidcDiscoveryUrl();
 
-            // Determine which logout method to use by searching for "google" or "okta"
+            // Determine which logout method to use
             String logoutMethod = determineLogoutMethod(oidcDiscoveryUrl);
 
             // Get the authorization code and grant
@@ -486,7 +474,8 @@ public class AccessResource extends ApplicationResource {
                         removeOidcRequestCookie(httpServletResponse);
 
                         // Forward to the error page
-                        forwardToMessagePage(httpServletRequest, httpServletResponse, "Unable to exchange authorization for ID token: " + e.getMessage());
+                        forwardToMessagePage(httpServletRequest, httpServletResponse, "Unable to exchange " +
+                                "authorization for ID token: " + e.getMessage());
                         return;
                     }
 
@@ -513,23 +502,21 @@ public class AccessResource extends ApplicationResource {
                                 httpServletResponse.sendRedirect(postLogoutRedirectUri);
                             }
                         } catch (final IOException e) {
-                            logger.error("There was an error logging out of the OpenId Connect Provider: " + e.getMessage(), e);
+                            logger.error("There was an error logging out of the OpenId Connect Provider: "
+                                    + e.getMessage(), e);
 
                             // Remove the oidc request cookie
                             removeOidcRequestCookie(httpServletResponse);
 
                             // Forward to the error page
                             forwardToMessagePage(httpServletRequest, httpServletResponse,
-                                    "There was an error logging out of the OpenId Connect Provider: " + e.getMessage());
-
-                            // TODO: Fix this Exception message
-//                            throw new IOException("There was an error logging out of the OpenId Connect Provider: "
-//                                    + e.getMessage());
+                                    "There was an error logging out of the OpenId Connect Provider: "
+                                            + e.getMessage());
                         }
                     }
                     break;
                 case ID_TOKEN_LOGOUT:
-                    // End session endpoint + ID Token
+                    // Use the end session endpoint + ID Token
                     final String idToken;
                     try {
                         // Return the ID Token
@@ -547,9 +534,11 @@ public class AccessResource extends ApplicationResource {
 
                     // Get the OIDC end session endpoint
                     URI endSessionEndpoint = oidcService.getEndSessionEndpoint();
+                    String postLogoutRedirectUri = generateResourceUri("..", "nifi", "logout-complete");
 
-                    if (endSessionEndpoint != null) {
-                        String postLogoutRedirectUri = generateResourceUri("..", "nifi", "logout-complete");
+                    if (endSessionEndpoint == null) {
+                        httpServletResponse.sendRedirect(postLogoutRedirectUri);
+                    } else {
                         URI logoutUri = UriBuilder.fromUri(endSessionEndpoint)
                                 .queryParam("id_token_hint", idToken)
                                 .queryParam("post_logout_redirect_uri", postLogoutRedirectUri)
@@ -1116,7 +1105,6 @@ public class AccessResource extends ApplicationResource {
 
         // return Authorization URI
         return authorizationUri;
-
     }
 
     // setters

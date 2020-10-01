@@ -16,7 +16,6 @@
  */
 package org.apache.nifi.web.security.oidc
 
-
 import com.nimbusds.jose.JWSAlgorithm
 import com.nimbusds.jwt.JWT
 import com.nimbusds.jwt.JWTClaimsSet
@@ -86,6 +85,8 @@ class StandardOidcIdentityProviderGroovyTest extends GroovyTestCase {
     private static NiFiProperties mockNiFiProperties
     private static JwtService mockJwtService = [:] as JwtService
 
+    private static final String MOCK_JWT = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6Ik5pRmkgT0lEQyBVbml0IFRlc3RlciIsImlhdCI6MTUxNjIzOTAyMiwiZXhwIjoxNTE2MzM5MDIyLCJpc3MiOiJuaWZpX3VuaXRfdGVzdF9hdXRob3JpdHkiLCJhdWQiOiJhbGwiLCJ1c2VybmFtZSI6Im9pZGNfdGVzdCIsImVtYWlsIjoib2lkY190ZXN0QG5pZmkuYXBhY2hlLm9yZyJ9.b4NIl0RONKdVLOH0D1eObdwAEX8qX-ExqB8KuKSZFLw"
+
     @BeforeClass
     static void setUpOnce() throws Exception {
         logger.metaClass.methodMissing = { String name, args ->
@@ -116,7 +117,6 @@ class StandardOidcIdentityProviderGroovyTest extends GroovyTestCase {
             String generateSignedToken(LoginAuthenticationToken lat) {
                 signNiFiToken(lat)
             }
-
         }
         mockJS
     }
@@ -365,18 +365,20 @@ class StandardOidcIdentityProviderGroovyTest extends GroovyTestCase {
         logger.info("OIDC Token Response: ${mockResponse.dump()}")
 
         // Act
-        String loginToken = soip.convertOIDCTokenToLoginAuthenticationToken(mockResponse)
+        final String loginToken = soip.convertOIDCTokenToLoginAuthenticationToken(mockResponse)
         logger.info("Login Authentication token: ${loginToken}")
 
         // Assert
-
         // Split ID Token into components
         def (String contents, String expiration) = loginToken.tokenize("\\[\\]")
         logger.info("Token contents: ${contents} | Expiration: ${expiration}")
 
         assert contents =~ "LoginAuthenticationToken for person@nifi\\.apache\\.org issued by https://accounts\\.issuer\\.com expiring at"
-        // TODO: add this assert?
-//        assert expiration <= System.currentTimeMillis() + 10_000
+
+        // Assert expiration
+        final String[] expList = expiration.split("\\s")
+        final Long expLong = Long.parseLong(expList[0])
+        assert expLong <= System.currentTimeMillis() + 10_000
     }
 
     @Test
@@ -431,10 +433,7 @@ class StandardOidcIdentityProviderGroovyTest extends GroovyTestCase {
         // Build ID Provider with mock token endpoint URI to make a connection
         StandardOidcIdentityProvider soip = buildIdentityProviderWithMockTokenValidator([:])
 
-        // Mock the JWT
-        def jwt = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6Ik5pRmkgT0lEQyBVbml0IFRlc3RlciIsImlhdCI6MTUxNjIzOTAyMiwiZXhwIjoxNTE2MzM5MDIyLCJpc3MiOiJuaWZpX3VuaXRfdGVzdF9hdXRob3JpdHkiLCJhdWQiOiJhbGwiLCJ1c2VybmFtZSI6Im9pZGNfdGVzdCIsImVtYWlsIjoib2lkY190ZXN0QG5pZmkuYXBhY2hlLm9yZyJ9.b4NIl0RONKdVLOH0D1eObdwAEX8qX-ExqB8KuKSZFLw"
-
-        def responseBody = [id_token: jwt, access_token: "some.access.token", refresh_token: "some.refresh.token", token_type: "bearer"]
+        def responseBody = [id_token: MOCK_JWT, access_token: "some.access.token", refresh_token: "some.refresh.token", token_type: "bearer"]
         HTTPRequest mockTokenRequest = mockHttpRequest(responseBody, 200, "HTTP OK")
 
         // Act
@@ -451,10 +450,7 @@ class StandardOidcIdentityProviderGroovyTest extends GroovyTestCase {
         // Build ID Provider with mock token endpoint URI to make a connection
         StandardOidcIdentityProvider soip = buildIdentityProviderWithMockTokenValidator([:])
 
-        // Mock the JWT
-        def jwt = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6Ik5pRmkgT0lEQyBVbml0IFRlc3RlciIsImlhdCI6MTUxNjIzOTAyMiwiZXhwIjoxNTE2MzM5MDIyLCJpc3MiOiJuaWZpX3VuaXRfdGVzdF9hdXRob3JpdHkiLCJhdWQiOiJhbGwiLCJ1c2VybmFtZSI6Im9pZGNfdGVzdCIsImVtYWlsIjoib2lkY190ZXN0QG5pZmkuYXBhY2hlLm9yZyJ9.b4NIl0RONKdVLOH0D1eObdwAEX8qX-ExqB8KuKSZFLw"
-
-        def responseBody = [id_token: jwt, access_token: "some.access.token", refresh_token: "some.refresh.token", token_type: "bearer"]
+        def responseBody = [id_token: MOCK_JWT, access_token: "some.access.token", refresh_token: "some.refresh.token", token_type: "bearer"]
         HTTPRequest mockTokenRequest = mockHttpRequest(responseBody, 500, "HTTP SERVER ERROR")
 
         // Act
@@ -467,23 +463,6 @@ class StandardOidcIdentityProviderGroovyTest extends GroovyTestCase {
         // Assert
         assert msg =~ "An error occurred while invoking the Token endpoint: null"
     }
-
-    // TODO: Confirm we don't need first 3 tests because it requires a network connection
-//    @Test
-//    void testShouldExchangeAuthorizationCodeForAccessToken() {}
-//
-//    @Test
-//    void testShouldExchangeAuthorizationCodeForIdToken() {}
-//
-//    @Test
-//    void testShouldAuthorizeClient() {}
-
-
-//    @Test
-//    void testGetAccessTokenStringShouldHandleError() {}
-
-//    @Test
-//    void testGetIdTokenStringShouldHandleError() {}
 
     @Test
     void testShouldGetAccessTokenString() {
@@ -499,8 +478,8 @@ class StandardOidcIdentityProviderGroovyTest extends GroovyTestCase {
         AccessTokenHash EXPECTED_HASH = AccessTokenHash.compute(mockAccessToken, jwsAlgorithm)
         logger.info("Expected at_hash: ${EXPECTED_HASH}")
 
-        // Create mock claims
-        Map<String, Object> mockClaims = (["at_hash":EXPECTED_HASH.toString()])
+        // Create mock claims with at_hash
+        Map<String, Object> mockClaims = (["at_hash": EXPECTED_HASH.toString()])
 
         // Create Claims Set
         JWTClaimsSet mockJWTClaimsSet = new JWTClaimsSet(mockClaims)
@@ -529,6 +508,7 @@ class StandardOidcIdentityProviderGroovyTest extends GroovyTestCase {
 
         // Mock access tokens
         AccessToken mockAccessToken = new BearerAccessToken()
+        logger.info("mock access token: ${mockAccessToken.toString()}")
         RefreshToken mockRefreshToken = new RefreshToken()
 
         // Compute the access token hash
@@ -537,7 +517,7 @@ class StandardOidcIdentityProviderGroovyTest extends GroovyTestCase {
         logger.info("Expected at_hash: ${EXPECTED_HASH}")
 
         // Create mock claim
-        final Map<String, Object> claims = mockClaims(["at_hash":EXPECTED_HASH.toString(),])
+        final Map<String, Object> claims = mockClaims(["at_hash":EXPECTED_HASH.toString()])
 
         // Create Claims Set
         JWTClaimsSet mockJWTClaimsSet = new JWTClaimsSet(claims)
@@ -547,13 +527,13 @@ class StandardOidcIdentityProviderGroovyTest extends GroovyTestCase {
 
         // Create OIDC Tokens
         OIDCTokens mockOidcTokens = new OIDCTokens(mockJwt, mockAccessToken, mockRefreshToken)
+        logger.info("mock id tokens: ${mockOidcTokens.getIDToken().properties}")
 
         // Act
         String accessTokenString = soip.validateAccessToken(mockOidcTokens)
         logger.info("Access Token: ${accessTokenString}")
 
         // Assert
-        // TODO: double check how to assert a void validation method
         assert accessTokenString == null
 
     }
@@ -638,7 +618,6 @@ class StandardOidcIdentityProviderGroovyTest extends GroovyTestCase {
         assert payloadString =~ "\"email\":\"person@nifi\\.apache\\.org\""
     }
 
-    // TODO: Confirm it's validating correctly
     @Test
     void testShouldValidateIdToken() {
         // Arrange
@@ -662,50 +641,7 @@ class StandardOidcIdentityProviderGroovyTest extends GroovyTestCase {
         assert claimsSet
         assert claimsSetString =~ "\"email\":\"person@nifi\\.apache\\.org\""
     }
-        // TODO: Fix test - it should fail. It's not going through tokenvalidator.validate
-//    @Test
-//    void testValidateIdTokenShouldHandleExpiredIdToken() {
-//        // Arrange
-//        StandardOidcIdentityProvider soip = buildIdentityProviderWithMockTokenValidator()
-////        StandardOidcIdentityProvider soip = buildIdentityProviderWithMock()
-//
-//        // Create expiration time
-////        final Calendar now = Calendar.getInstance()
-////        logger.info("Now time: ${now.getTimeInMillis()}")
-//        final long iat = 1400907145130
-//        final long exp = 1300907145130
-//
-//        // Create mock claim with expired time
-////        final Map<String, Object> claims = emptyMockClaims([:])
-//        final Map<String, Object> claims = mockClaims([
-//                "iat":iat,
-//                "exp":exp
-//        ])
-//
-//        // Create Claims Set
-//        JWTClaimsSet mockJWTClaimsSet = new JWTClaimsSet(claims)
-//        logger.info("mockJWTClaimsSet: ${mockJWTClaimsSet.dump()}")
-//
-//        // Create JWT
-//        JWT mockJwt = new PlainJWT(mockJWTClaimsSet)
-//        logger.info("mockJWT: ${mockJwt.dump()}")
-//
-//        // Act
-//        final IDTokenClaimsSet claimsSet = soip.validateIdToken(mockJwt)
-//        final String claimsSetString = claimsSet.toJSONObject().toString()
-//        logger.info("ID Token Claims Set: ${claimsSetString}")
-//        logger.info("Current time: ${System.currentTimeMillis()} ms")
-//
-////        def(msg) = shouldFail(BadJOSEException) {
-////            soip.validateIdToken(mockJwt)
-////        }
-//
-//        // Assert
-////        assert msg =~ ""
-//    }
 
-    // Do I need this test? Do I need to test if an error occurs?
-    // The response would not get passed unless it's a success
     @Test
     void testShouldGetOidcTokens() {
         // Arrange
@@ -777,41 +713,6 @@ class StandardOidcIdentityProviderGroovyTest extends GroovyTestCase {
             }
         }
         soip.tokenValidator = mockTokenValidator
-        logger.info("Token Validator: ${mockTokenValidator.properties}")
-        logger.info("SOIP: ${soip.properties}")
-        soip
-    }
-
-    private StandardOidcIdentityProvider buildIdentityProviderWithMock(Map<String, String> additionalProperties = [:]) {
-        JwtService mockJS = buildJwtService()
-        NiFiProperties mockNFP = buildNiFiProperties(additionalProperties)
-        StandardOidcIdentityProvider soip = new StandardOidcIdentityProvider(mockJS, mockNFP)
-
-        // Mock OIDC provider metadata
-        Issuer mockIssuer = new Issuer("mockIssuer")
-        URI mockURI = new URI("https://localhost/oidc")
-        OIDCProviderMetadata metadata = new OIDCProviderMetadata(mockIssuer, [SubjectType.PUBLIC], mockURI)
-        soip.oidcProviderMetadata = metadata
-
-        // Set OIDC Provider metadata attributes
-        final ClientID CLIENT_ID = new ClientID("expected_client_id")
-        final Secret CLIENT_SECRET = new Secret("expected_client_secret")
-
-        // Inject into OIP
-        soip.clientId = CLIENT_ID
-        soip.clientSecret = CLIENT_SECRET
-        soip.oidcProviderMetadata["tokenEndpointAuthMethods"] = [ClientAuthenticationMethod.CLIENT_SECRET_BASIC]
-        soip.oidcProviderMetadata["tokenEndpointURI"] = new URI("https://localhost/oidc/token")
-        soip.oidcProviderMetadata["userInfoEndpointURI"] = new URI("https://localhost/oidc/userInfo")
-
-//        // Mock token validator
-//        IDTokenValidator mockTokenValidator = new IDTokenValidator(mockIssuer, CLIENT_ID) {
-//            @Override
-//            IDTokenClaimsSet validate(JWT jwt, Nonce nonce) {
-//                return new IDTokenClaimsSet(jwt.getJWTClaimsSet())
-//            }
-//        }
-//        soip.tokenValidator = mockTokenValidator
         soip
     }
 
@@ -851,21 +752,6 @@ class StandardOidcIdentityProviderGroovyTest extends GroovyTestCase {
         claims
     }
 
-    private static Map<String, Object> emptyMockClaims(Map<String, Object> additionalClaims = [:]) {
-        final Map<String, Object> claims = [
-                "iss"           : "",
-                "azp"           : "",
-                "aud"           : "",
-                "sub"           : "",
-                "email"         : "",
-                "email_verified": "",
-                "at_hash"       : "",
-                "iat"           : "",
-                "exp"           : ""
-        ] + additionalClaims
-        claims
-    }
-
     /**
      * Forms an {@link HTTPRequest} object which returns a static response when {@code send( )} is called.
      *
@@ -892,13 +778,6 @@ class StandardOidcIdentityProviderGroovyTest extends GroovyTestCase {
                 mockResponse.setContent(JsonOutput.toJson(responseBody))
                 mockResponse
             }
-        }
-    }
-
-    class MockOIDCProviderMetadata extends OIDCProviderMetadata {
-
-        MockOIDCProviderMetadata() {
-            super([:] as Issuer, [SubjectType.PUBLIC] as List<SubjectType>, new URI("https://localhost"))
         }
     }
 }
