@@ -20,11 +20,12 @@
     <head>
         <title>NiFi Logout</title>
         <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
+        <link rel="stylesheet" href="css/logout.css" type="text/css" />
         <link rel="shortcut icon" href="images/nifi16.ico"/>
         <link rel="stylesheet" href="assets/reset.css/reset.css" type="text/css" />
         <link rel="stylesheet" href="fonts/flowfont/flowfont.css" type="text/css" />
         <link rel="stylesheet" href="assets/font-awesome/css/font-awesome.min.css" type="text/css" />
-        ${nf.login.style.tags}
+        ${nf.logout.style.tags}
         <link rel="stylesheet" href="js/jquery/modal/jquery.modal.css?${project.version}" type="text/css" />
         <link rel="stylesheet" href="assets/qtip2/dist/jquery.qtip.min.css?" type="text/css" />
         <link rel="stylesheet" href="assets/jquery-ui-dist/jquery-ui.min.css" type="text/css" />
@@ -41,17 +42,17 @@
         <script type="text/javascript" src="js/nf/nf-namespace.js?${project.version}"></script>
         <script type="text/javascript" src="assets/lodash-core/distrib/lodash-core.min.js"></script>
         <script type="text/javascript" src="assets/moment/min/moment.min.js"></script>
-        ${nf.login.script.tags}
+        ${nf.logout.script.tags}
     </head>
     <body class="logout-body">
         <div id="logout-user-links-container">
             <ul id="logout-user-links" class="links">
-<%--                <li id="user-logout-container" style="display: none;">--%>
-<%--                    <span id="user-logout" class="link">log out</span>--%>
-<%--                </li>--%>
-<%--                <li>--%>
+                <li id="user-logout-container" style="display: none;">
+                    <span id="user-logout" class="link">log out</span>
+                </li>
+                <li>
 <%--                    <span id="user-home" class="link">home</span>--%>
-<%--                </li>--%>
+                </li>
             </ul>
             <div class="clear"></div>
         </div>
