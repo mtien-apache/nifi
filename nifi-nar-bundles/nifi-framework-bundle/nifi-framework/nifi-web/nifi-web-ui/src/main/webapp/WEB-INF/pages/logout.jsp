@@ -20,11 +20,11 @@
     <head>
         <title>NiFi Logout</title>
         <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
-        <link rel="stylesheet" href="css/logout.css" type="text/css" />
         <link rel="shortcut icon" href="images/nifi16.ico"/>
         <link rel="stylesheet" href="assets/reset.css/reset.css" type="text/css" />
         <link rel="stylesheet" href="fonts/flowfont/flowfont.css" type="text/css" />
         <link rel="stylesheet" href="assets/font-awesome/css/font-awesome.min.css" type="text/css" />
+        <link rel="stylesheet" href="css/logout.css" type="text/css" />
         ${nf.logout.style.tags}
         <link rel="stylesheet" href="js/jquery/modal/jquery.modal.css?${project.version}" type="text/css" />
         <link rel="stylesheet" href="assets/qtip2/dist/jquery.qtip.min.css?" type="text/css" />
@@ -45,20 +45,8 @@
         ${nf.logout.script.tags}
     </head>
     <body class="logout-body">
-<%--        <div id="logout-user-links-container">--%>
-<%--            <ul id="logout-user-links" class="links">--%>
-<%--                <li id="user-logout-container" style="display: none;">--%>
-<%--                    <span id="user-logout" class="link">log out</span>--%>
-<%--                </li>--%>
-<%--                <li>--%>
-<%--&lt;%&ndash;                    <span id="user-home" class="link">home</span>&ndash;%&gt;--%>
-<%--                </li>--%>
-<%--            </ul>--%>
-<%--            <div class="clear"></div>--%>
-<%--        </div>--%>
         <div id="logout-contents-container">
             <jsp:include page="/WEB-INF/partials/logout/logout-message.jsp"/>
         </div>
-        <jsp:include page="/WEB-INF/partials/ok-dialog.jsp"/>
     </body>
 </html>
