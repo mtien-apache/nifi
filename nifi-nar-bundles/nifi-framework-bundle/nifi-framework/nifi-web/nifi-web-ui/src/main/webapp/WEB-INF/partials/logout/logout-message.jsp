@@ -15,7 +15,7 @@
   limitations under the License.
 --%>
 <%@ page contentType="text/html" pageEncoding="UTF-8" session="false" %>
-<div id="logout-message-container" class="hidden">
+<div id="logout-message-container">
     <div id="logout-message-title"><p>Logout successful</p></div>
     <div id="logout-message"><p>You have have successfully logged out. You may now close the window.</p></div>
 </div>

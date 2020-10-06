@@ -16,22 +16,23 @@
 --%>
 <%@ page contentType="text/html" pageEncoding="UTF-8" session="false" %>
 <!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+    <%
+    // Sanitize the contextPath to ensure it is on this server
+    // rather than getting it from the header directly
+    String contextPath = request.getAttribute("contextPath").toString();
+%>
 <html>
     <head>
-        <title>NiFi Logout</title>
+        <title><%= request.getAttribute("title") == null ? "" : org.apache.nifi.util.EscapeUtils.escapeHtml(request.getAttribute("title").toString()) %></title>
         <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
-        <link rel="shortcut icon" href="images/nifi16.ico"/>
-        <link rel="stylesheet" href="assets/reset.css/reset.css" type="text/css" />
-        <link rel="stylesheet" href="fonts/flowfont/flowfont.css" type="text/css" />
-        <link rel="stylesheet" href="assets/font-awesome/css/font-awesome.min.css" type="text/css" />
-        <link rel="stylesheet" href="css/logout.css" type="text/css" />
-        ${nf.logout.style.tags}
+        <link rel="shortcut icon" href="<%= contextPath %>/images/nifi16.ico"/>
         <link rel="stylesheet" href="js/jquery/modal/jquery.modal.css?${project.version}" type="text/css" />
         <link rel="stylesheet" href="assets/qtip2/dist/jquery.qtip.min.css?" type="text/css" />
         <link rel="stylesheet" href="assets/jquery-ui-dist/jquery-ui.min.css" type="text/css" />
-        <link rel="stylesheet" href="fonts/flowfont/flowfont.css" type="text/css" />
-        <link rel="stylesheet" href="assets/angular-material/angular-material.min.css" type="text/css" />
-        <link rel="stylesheet" href="assets/font-awesome/css/font-awesome.min.css" type="text/css" />
+<%--        <link rel="stylesheet" href="assets/angular-material/angular-material.min.css" type="text/css" />--%>
+        <link rel="stylesheet" href="<%= contextPath %>/nifi/assets/reset.css/reset.css" type="text/css" />
+        <link rel="stylesheet" href="<%= contextPath %>/nifi/css/common-ui.css" type="text/css" />
         <script type="text/javascript" src="assets/jquery/dist/jquery.min.js"></script>
         <script type="text/javascript" src="js/jquery/jquery.base64.js"></script>
         <script type="text/javascript" src="js/jquery/jquery.count.js"></script>
@@ -41,10 +42,65 @@
         <script type="text/javascript" src="assets/jquery-ui-dist/jquery-ui.min.js"></script>
         <script type="text/javascript" src="js/nf/nf-namespace.js?${project.version}"></script>
         <script type="text/javascript" src="assets/lodash-core/distrib/lodash-core.min.js"></script>
-        <script type="text/javascript" src="assets/moment/min/moment.min.js"></script>
-        ${nf.logout.script.tags}
+
+        <style type="text/css">
+            #logout-contents-container {
+                position: absolute;
+                top: 0;
+                left: 0;
+                bottom: 0;
+                right: 0;
+                background: #fff url(<%= contextPath %>/nifi/images/bg-error.png) left top no-repeat;
+                padding-top: 100px;
+                padding-left: 100px;
+            }
+
+            #logout-message-title {
+                font-size: 18px;
+                color: #294c58;
+                margin-bottom: 16px;
+            }
+
+            #logout-message {
+                font-size: 11px;
+            }
+
+            #logout-user-links-container {
+                position: absolute;
+                top: 0;
+                left: 0;
+                padding-top: 100px;
+                padding-left: 100px;
+                z-index: 1300;
+                width: 412px;
+            }
+
+            #logout-user-links {
+                float: right;
+            }
+        </style>
+
+        <script type="text/javascript">
+            $(document).ready(function () {
+                $('#user-home').on('mouseenter', function () {
+                    $(this).addClass('link-over');
+                }).on('mouseleave', function () {
+                    $(this).removeClass('link-over');
+                }).on('click', function () {
+                    window.location = '<%= contextPath %>/nifi';
+                });
+            });
+        </script>
     </head>
+
     <body class="logout-body">
+    <div id="logout-user-links-container">
+        <ul id="logout-user-links" class="links">
+            <li>
+                <span id="user-home" class="link">home</span>
+            </li>
+        </ul>
+    </div>
         <div id="logout-contents-container">
             <jsp:include page="/WEB-INF/partials/logout/logout-message.jsp"/>
         </div>
