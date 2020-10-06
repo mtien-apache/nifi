@@ -90,6 +90,7 @@ public interface OidcIdentityProvider {
      *
      * @param authorizationGrant authorization grant for invoking the Token Endpoint
      * @return an Access Token String
+     * @throws Exception if there was an exceptional error while communicating with the OIDC provider
      */
     String exchangeAuthorizationCodeForAccessToken(AuthorizationGrant authorizationGrant) throws Exception;
 
@@ -98,6 +99,7 @@ public interface OidcIdentityProvider {
      *
      * @param authorizationGrant authorization grant for invoking the Token Endpoint
      * @return an ID Token String
+     * @throws IOException if there was an exceptional error while communicating with the OIDC provider
      */
-    String exchangeAuthorizationCodeForIdToken(final AuthorizationGrant authorizationGrant);
+    String exchangeAuthorizationCodeForIdToken(final AuthorizationGrant authorizationGrant) throws IOException;
 }
