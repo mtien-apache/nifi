@@ -535,7 +535,6 @@ class StandardOidcIdentityProviderGroovyTest extends GroovyTestCase {
 
         // Assert
         assert accessTokenString == null
-
     }
 
     @Test

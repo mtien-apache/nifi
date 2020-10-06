@@ -16,7 +16,7 @@
  */
 package org.apache.nifi.web.security.oidc
 
-import com.google.common.cache.CacheBuilder
+
 import com.nimbusds.oauth2.sdk.auth.ClientAuthenticationMethod
 import com.nimbusds.oauth2.sdk.id.Issuer
 import com.nimbusds.openid.connect.sdk.SubjectType
@@ -37,7 +37,6 @@ import org.junit.runners.JUnit4
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
-import java.util.concurrent.ExecutionException
 import java.util.concurrent.TimeUnit
 
 @RunWith(JUnit4.class)
@@ -133,26 +132,8 @@ class OidcServiceGroovyTest extends GroovyTestCase {
         service.storeJwt(MOCK_REQUEST_IDENTIFIER, MOCK_JWT)
 
         // Assert
-        final String cachedJwt
-
-        final int DURATION = 60
-        final TimeUnit EXPIRATION_UNITS = TimeUnit.SECONDS
-
-        // Look up the jwt with Request Identifier
-        service.jwtLookupForCompletedRequests = CacheBuilder
-                .newBuilder()
-                .expireAfterWrite(DURATION, EXPIRATION_UNITS)
-                .build()
-        try {
-            synchronized (service.jwtLookupForCompletedRequests) {
-                cachedJwt = service.jwtLookupForCompletedRequests.get(
-                        MOCK_REQUEST_IDENTIFIER,
-                        { -> MOCK_JWT })
-                logger.info("Cached JWT: ${cachedJwt}")
-            }
-        } catch (final ExecutionException e) {
-            throw new IllegalStateException("Unable to store the login authentication token.")
-        }
+        final String cachedJwt = service.getJwt(MOCK_REQUEST_IDENTIFIER)
+        logger.info("Cached JWT: ${cachedJwt}")
 
         assert cachedJwt == MOCK_JWT
     }

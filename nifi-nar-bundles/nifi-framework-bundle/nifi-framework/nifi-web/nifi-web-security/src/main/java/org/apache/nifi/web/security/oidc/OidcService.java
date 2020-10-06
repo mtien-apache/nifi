@@ -216,6 +216,7 @@ public class OidcService {
      *
      * @param authorizationGrant authorization grant
      * @return an Access Token string
+     * @throws IOException exceptional case for communication error with the OpenId Connect provider
      */
     public String exchangeAuthorizationCodeForAccessToken(final AuthorizationGrant authorizationGrant) throws Exception {
         if (!isOidcEnabled()) {
@@ -231,8 +232,9 @@ public class OidcService {
      *
      * @param authorizationGrant authorization grant
      * @return an ID Token string
+     * @throws IOException exceptional case for communication error with the OpenId Connect provider
      */
-    public String exchangeAuthorizationCodeForIdToken(final AuthorizationGrant authorizationGrant) {
+    public String exchangeAuthorizationCodeForIdToken(final AuthorizationGrant authorizationGrant) throws IOException {
         if (!isOidcEnabled()) {
             throw new IllegalStateException(OPEN_ID_CONNECT_SUPPORT_IS_NOT_CONFIGURED);
         }
