@@ -20,6 +20,7 @@ import com.nimbusds.oauth2.sdk.AuthorizationCode;
 import com.nimbusds.oauth2.sdk.AuthorizationCodeGrant;
 import com.nimbusds.oauth2.sdk.AuthorizationGrant;
 import com.nimbusds.oauth2.sdk.ParseException;
+import com.nimbusds.oauth2.sdk.http.HTTPResponse;
 import com.nimbusds.oauth2.sdk.id.State;
 import com.nimbusds.openid.connect.sdk.AuthenticationErrorResponse;
 import com.nimbusds.openid.connect.sdk.AuthenticationResponseParser;
@@ -32,7 +33,8 @@ import io.swagger.annotations.ApiResponses;
 import java.io.IOException;
 import java.net.URI;
 import java.security.cert.X509Certificate;
-import java.util.Objects;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
@@ -52,13 +54,15 @@ import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.UriBuilder;
-import okhttp3.Call;
-import okhttp3.FormBody;
-import okhttp3.HttpUrl;
-import okhttp3.OkHttpClient;
-import okhttp3.Request;
-import okhttp3.RequestBody;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.http.NameValuePair;
+import org.apache.http.client.config.RequestConfig;
+import org.apache.http.client.entity.UrlEncodedFormEntity;
+import org.apache.http.client.methods.CloseableHttpResponse;
+import org.apache.http.client.methods.HttpPost;
+import org.apache.http.impl.client.CloseableHttpClient;
+import org.apache.http.impl.client.HttpClientBuilder;
+import org.apache.http.message.BasicNameValuePair;
 import org.apache.nifi.admin.service.AdministrationException;
 import org.apache.nifi.authentication.AuthenticationResponse;
 import org.apache.nifi.authentication.LoginCredentials;
@@ -481,26 +485,40 @@ public class AccessResource extends ApplicationResource {
 
                     // Build the revoke URI and send the POST request
                     URI revokeEndpoint = getRevokeEndpoint();
+
                     if (revokeEndpoint != null) {
                         try {
-                            OkHttpClient client = new OkHttpClient();
-
-                            RequestBody formBody = new FormBody.Builder()
-                                    .add("token", accessToken)
+                            int timeout = 30_000; // ms
+                            RequestConfig config = RequestConfig.custom()
+                                    .setConnectTimeout(timeout)
+                                    .setConnectionRequestTimeout(timeout)
+                                    .setSocketTimeout(timeout)
                                     .build();
 
-                            Request request = new Request.Builder()
-                                    .url(Objects.requireNonNull(HttpUrl.get(revokeEndpoint)))
-                                    .post(formBody)
+                            CloseableHttpClient httpClient = HttpClientBuilder
+                                    .create()
+                                    .setDefaultRequestConfig(config)
                                     .build();
+                            HttpPost httpPost = new HttpPost(revokeEndpoint);
 
-                            Call call = client.newCall(request);
-                            okhttp3.Response response = call.execute();
+                            List<NameValuePair> params = new ArrayList<>();
+                            params.add(new BasicNameValuePair("token", accessToken));
+                            httpPost.setEntity(new UrlEncodedFormEntity(params));
 
-                            if (response.isSuccessful()) {
-                                String postLogoutRedirectUri = generateResourceUri( "..", "nifi", "logout-complete");
-                                httpServletResponse.sendRedirect(postLogoutRedirectUri);
+                            try (CloseableHttpResponse response = httpClient.execute(httpPost)) {
+                                httpClient.close();
+
+                                if (response.getStatusLine().getStatusCode() == HTTPResponse.SC_OK) {
+                                    // Redirect to logout page
+                                    logger.debug("You are logged out of the OpenId Connect Provider.");
+                                    String postLogoutRedirectUri = generateResourceUri("..", "nifi", "logout-complete");
+                                    httpServletResponse.sendRedirect(postLogoutRedirectUri);
+                                } else {
+                                    logger.error("There was an error logging out of the OpenId Connect Provider. " +
+                                            "Response status: " + response.getStatusLine().getStatusCode());
+                                }
                             }
+
                         } catch (final IOException e) {
                             logger.error("There was an error logging out of the OpenId Connect Provider: "
                                     + e.getMessage(), e);
@@ -537,6 +555,8 @@ public class AccessResource extends ApplicationResource {
                     String postLogoutRedirectUri = generateResourceUri("..", "nifi", "logout-complete");
 
                     if (endSessionEndpoint == null) {
+                        logger.debug("Unable to log out of the OpenId Connect Provider. The end session endpoint is: null." +
+                                " Redirecting to the logout page.");
                         httpServletResponse.sendRedirect(postLogoutRedirectUri);
                     } else {
                         URI logoutUri = UriBuilder.fromUri(endSessionEndpoint)
