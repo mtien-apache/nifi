@@ -517,6 +517,7 @@ public class AccessResource extends ApplicationResource {
                                             "Response status: " + response.getStatusLine().getStatusCode());
                                 }
                             }
+
                         } catch (final IOException e) {
                             logger.error("There was an error logging out of the OpenId Connect Provider: "
                                     + e.getMessage(), e);
