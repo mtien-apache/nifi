@@ -20,6 +20,7 @@ import com.nimbusds.oauth2.sdk.AuthorizationCode;
 import com.nimbusds.oauth2.sdk.AuthorizationCodeGrant;
 import com.nimbusds.oauth2.sdk.AuthorizationGrant;
 import com.nimbusds.oauth2.sdk.id.State;
+import java.io.IOException;
 import java.net.URI;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
@@ -91,20 +92,10 @@ public class OidcServiceTest {
     }
 
     @Test(expected = IllegalStateException.class)
-    public void testOidcNotEnabledExchangeCodeForIdToken() {
+    public void testOidcNotEnabledExchangeCodeForIdToken() throws IOException {
         final OidcService service = getServiceWithNoOidcSupport();
         service.exchangeAuthorizationCodeForIdToken(getAuthorizationGrant());
     }
-
-//    // TODO: Now this test does not have Exceptions, but is it not supposed to allow multiple invocations?
-    // Fixed this Exception by removing UUID parameter: java.lang.Exception: Unexpected exception, expected<java.lang.IllegalStateException> but was<java.lang.ClassCastException>.
-//
-//    @Test(expected = IllegalStateException.class)
-//    public void testExchangeCodeMultipleInvocation() throws Exception {
-//        final OidcService service = getServiceWithOidcSupport();
-//        service.exchangeAuthorizationCodeForLoginAuthenticationToken(getAuthorizationGrant());
-//        service.exchangeAuthorizationCodeForLoginAuthenticationToken(getAuthorizationGrant());
-//    }
 
     @Test(expected = IllegalStateException.class)
     public void testOidcNotEnabledGetJwt() {
