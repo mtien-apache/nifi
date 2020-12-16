@@ -19,16 +19,25 @@ package org.apache.nifi.security.util;
 
 import java.io.BufferedInputStream;
 import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.security.GeneralSecurityException;
 import java.security.Key;
+import java.security.KeyPair;
+import java.security.KeyPairGenerator;
 import java.security.KeyStore;
 import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
 import java.security.Security;
 import java.security.UnrecoverableKeyException;
+import java.security.cert.Certificate;
 import java.security.cert.CertificateException;
+import java.security.cert.X509Certificate;
+import java.util.Objects;
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLParameters;
@@ -44,6 +53,19 @@ public class KeyStoreUtils {
     private static final Logger logger = LoggerFactory.getLogger(KeyStoreUtils.class);
 
     public static final String SUN_PROVIDER_NAME = "SUN";
+    public static final String KEYSTORE_JKS = "JKS";
+    public static final String KEYSTORE_PKCS12 = "PKCS12";
+    public static final String KEYSTORE_JKS_EXT = ".jks";
+    public static final String KEYSTORE_PKCS12_EXT = ".p12";
+    public static final String KEYSTORE_PASSWORD = "passwordpassword";
+    public static final String TRUSTSTORE_PASSWORD = "passwordpassword";
+    public static final String CLIENT_ALIAS = "client";
+    public static final String SERVER_ALIAS = "server";
+    public static final String TLS_PROTOCOL_VERSION = TlsConfiguration.getHighestCurrentSupportedTlsProtocolVersion();
+
+    public static Path keyStorePath;
+    public static Path trustStorePath;
+    public static StandardTlsConfiguration tlsConfiguration;
 
     static {
         Security.addProvider(new BouncyCastleProvider());
@@ -122,6 +144,279 @@ public class KeyStoreUtils {
     }
 
     /**
+     * Creates a temporary default Keystore and Truststore and returns it wrapped in a TLS Configuration.
+     *
+     * @return a {@link org.apache.nifi.security.util.TlsConfiguration}
+     */
+    public static StandardTlsConfiguration createTlsConfigWithNewKeystoreAndTruststore() throws IOException, GeneralSecurityException {
+        return createTlsConfigWithNewKeystoreAndTruststore(KEYSTORE_PKCS12, KEYSTORE_PASSWORD, KEYSTORE_PASSWORD, KEYSTORE_PKCS12, TRUSTSTORE_PASSWORD);
+    }
+
+    /**
+     * Creates a temporary Keystore and Truststore and returns it wrapped in a TLS Configuration with the given values.
+     *
+     * @param keystoreType       the keystore type as a String
+     * @param keystorePassword   the keystore password
+     * @param truststoreType     the truststore type as a String
+     * @param truststorePassword the truststore password
+     * @return a {@link org.apache.nifi.security.util.TlsConfiguration}
+     */
+    public static StandardTlsConfiguration createTlsConfigWithNewKeystoreAndTruststore(String keystoreType, String keystorePassword, String truststoreType, String truststorePassword) throws IOException, GeneralSecurityException {
+        return createTlsConfigWithNewKeystoreAndTruststore(keystoreType, keystorePassword, keystorePassword, truststoreType, truststorePassword);
+    }
+
+    /**
+     * Creates a temporary Keystore and Truststore and returns it wrapped in a TLS Configuration with the given values.
+     *
+     * @param keystoreType       the keystore type as a String
+     * @param keystorePassword   the keystore password
+     * @param truststoreType     the truststore type as a String
+     * @return a {@link org.apache.nifi.security.util.TlsConfiguration}
+     */
+    public static StandardTlsConfiguration createTlsConfigWithNewKeystoreAndTruststore(String keystoreType, String keystorePassword, String truststoreType) throws IOException, GeneralSecurityException {
+        return createTlsConfigWithNewKeystoreAndTruststore(keystoreType, keystorePassword, keystorePassword, truststoreType, TRUSTSTORE_PASSWORD);
+    }
+
+    //TODO: Do I need a constructor for a scenario where I only pass a keystore pw + Key pw, but no Truststore pw. The problem is that this constructor of (String, String, String, String) is already defined.
+//    /**
+//     * Creates a temporary Keystore and Truststore and returns it wrapped in a TLS Configuration with the given values.
+//     *
+//     * @param keystoreType       the keystore type as a String
+//     * @param keystorePassword   the keystore password
+//     * @param keyPassword        the key password
+//     * @param truststoreType     the truststore type as a String
+//     * @return a {@link org.apache.nifi.security.util.TlsConfiguration}
+//     */
+//    public static StandardTlsConfiguration createTlsConfigWithNewKeystoreAndTruststore(String keystoreType, String keystorePassword, String keyPassword, String truststoreType) throws IOException, GeneralSecurityException {
+//        return createTlsConfigWithNewKeystoreAndTruststore(keystoreType, keystorePassword, keyPassword, truststoreType, TRUSTSTORE_PASSWORD);
+//    }
+
+    public static StandardTlsConfiguration createNewKeystoreAndTruststoreWithTlsConfig(StandardTlsConfiguration tlsConfiguration) throws GeneralSecurityException, IOException {
+        // Check if KS/TS/Keystore PW properties are populated
+        // TODO: If a Keystore or Truststore already exist in the TLS config, should we overwrite it or not?
+        if (tlsConfiguration.isKeystorePopulated()) {
+            logger.debug("A Keystore file already exists with the given TLS configuration. Overwriting with a new Keystore.");
+        } else if (tlsConfiguration.isTruststorePopulated()) {
+            logger.debug("A Truststore already exists with the given TLS configuration. Overwriting with a new Truststore.");
+        } else if (tlsConfiguration.getKeystorePassword() == null) { // Check if KS PW is set
+            logger.debug("The Keystore password property cannot be empty in the given TLS configuration.");
+            throw new IllegalArgumentException("The Keystore password cannot be empty in the given TLS configuration.");
+        }
+
+        // Check if Key PW is set
+        // If not set, use Keystore PW
+
+        // Check if KS type is set
+        // If not set, default to PKCS12
+
+        // Extract TLS props to create temp KS/TS path
+        // Return new TLS configs
+        return createTlsConfigWithNewKeystoreAndTruststore(
+                (tlsConfiguration.getKeystoreType() != null ? tlsConfiguration.getKeystoreType().toString() : KEYSTORE_PKCS12),
+                tlsConfiguration.getKeystorePassword(),
+                (tlsConfiguration.getKeyPassword() != null ? tlsConfiguration.getKeyPassword() : tlsConfiguration.getKeystorePassword()),
+                (tlsConfiguration.getTruststoreType() != null ? tlsConfiguration.getTruststoreType().toString() : KEYSTORE_PKCS12),
+                (tlsConfiguration.getTruststorePassword() != null ? tlsConfiguration.getTruststorePassword() : "")
+        );
+    }
+
+    /**
+     * Creates a temporary Keystore and Truststore and returns it wrapped in a TLS Configuration with the given values.
+     *
+     * @param keystoreType       the keystore type as a String
+     * @param keystorePassword   the keystore password
+     * @param keyPassword        the key password
+     * @param truststoreType     the truststore type as a String
+     * @param truststorePassword the truststore password
+     * @return a {@link org.apache.nifi.security.util.TlsConfiguration}
+     */
+    public static StandardTlsConfiguration createTlsConfigWithNewKeystoreAndTruststore(String keystoreType, String keystorePassword, String keyPassword, String truststoreType, String truststorePassword) throws IOException, GeneralSecurityException {
+
+        // Create temporary Keystore and Truststore files
+        try {
+            keyStorePath = generateTempKeystorePath(keystoreType);
+            trustStorePath = generateTempTruststorePath(truststoreType);
+        } catch (IOException e) {
+            throw new IOException("There was an error creating a keystore or truststore: " + e.getMessage());
+        }
+
+        // Create X509 Certificate
+        final X509Certificate clientCert = createKeyStoreAndGetX509Certificate(CLIENT_ALIAS, keystorePassword, keyPassword, keyStorePath.toString(), keystoreType);
+        // Create Truststore
+        createTrustStore(clientCert, CLIENT_ALIAS, truststorePassword, trustStorePath.toString(), getKeystoreType(truststoreType));
+
+        return tlsConfiguration = new StandardTlsConfiguration(
+                keyStorePath.toString(),
+                keystorePassword,
+                keyPassword,
+                getKeystoreType(keystoreType),
+                trustStorePath.toString(),
+                truststorePassword,
+                getKeystoreType(keystoreType),
+                TLS_PROTOCOL_VERSION);
+    }
+
+    public static StandardTlsConfiguration createTlsConfigWithNewTruststoreOnly(String truststoreType, String truststorePassword) throws IOException, GeneralSecurityException {
+        // Create temp Truststore file path
+        try {
+            trustStorePath = generateTempTruststorePath(truststoreType);
+        } catch (IOException e) {
+            throw new IOException("There was an error creating a keystore or truststore: " + e.getMessage());
+        }
+
+        final KeyPair keyPair = KeyPairGenerator.getInstance("RSA").generateKeyPair();
+        final X509Certificate selfSignedCert = CertificateUtils.generateSelfSignedX509Certificate(
+                keyPair, "CN=localhost,OU=NiFi", "SHA256withRSA", 365
+        );
+
+        // Create Truststore
+        createTrustStore(selfSignedCert, CLIENT_ALIAS, truststorePassword, trustStorePath.toString(), getKeystoreType(truststoreType));
+
+        // Return a Truststore wrapped in TLS Configuration
+        return tlsConfiguration = new StandardTlsConfiguration(
+                null,
+                null,
+                null,
+                null,
+                trustStorePath.toString(),
+                truststorePassword,
+                getKeystoreType(truststoreType),
+                TLS_PROTOCOL_VERSION);
+    }
+
+    /**
+     * Loads the Keystore and returns a X509 Certificate with the given values.
+     *
+     * @param alias              the certificate alias
+     * @param keyStorePassword   the keystore password
+     * @param keyStorePath       the keystore path
+     * @param keyStoreType       the keystore type as a String
+     * @return a {@link X509Certificate}
+     */
+    public static X509Certificate createKeyStoreAndGetX509Certificate(
+            final String alias, final String keyStorePassword, final String keyStorePath, final String keyStoreType)
+            throws IOException, KeyStoreException, NoSuchAlgorithmException, CertificateException {
+
+        try (final FileOutputStream outputStream = new FileOutputStream(keyStorePath)) {
+            final KeyPair keyPair = KeyPairGenerator.getInstance("RSA").generateKeyPair();
+
+            final X509Certificate selfSignedCert = CertificateUtils.generateSelfSignedX509Certificate(
+                    keyPair, "CN=localhost,OU=NiFi", "SHA256withRSA", 365
+            );
+
+            final char[] passwordChars = keyStorePassword.toCharArray();
+            final KeyStore keyStore = loadEmptyKeyStore(keyStoreType);
+            keyStore.setKeyEntry(alias, keyPair.getPrivate(), passwordChars, new Certificate[]{selfSignedCert});
+            keyStore.store(outputStream, passwordChars);
+
+            return selfSignedCert;
+        }
+    }
+
+    /**
+     * Loads the Keystore and returns a X509 Certificate with the given values.
+     *
+     * @param alias              the certificate alias
+     * @param keyStorePassword   the keystore password
+     * @param keyPassword        the key password
+     * @param keyStorePath       the keystore path
+     * @param keyStoreType       the keystore type as a String
+     * @return a {@link X509Certificate}
+     */
+    public static X509Certificate createKeyStoreAndGetX509Certificate(
+            final String alias, final String keyStorePassword, final String keyPassword, final String keyStorePath,
+            final String keyStoreType) throws IOException, KeyStoreException, NoSuchAlgorithmException, CertificateException {
+
+        try (final FileOutputStream outputStream = new FileOutputStream(keyStorePath)) {
+            final KeyPair keyPair = KeyPairGenerator.getInstance("RSA").generateKeyPair();
+
+            final X509Certificate selfSignedCert = CertificateUtils.generateSelfSignedX509Certificate(
+                    keyPair, "CN=localhost,OU=NiFi", "SHA256withRSA", 365
+            );
+
+            final KeyStore keyStore = loadEmptyKeyStore(keyStoreType);
+            keyStore.setKeyEntry(alias, keyPair.getPrivate(), keyPassword.toCharArray(), new Certificate[]{selfSignedCert});
+            keyStore.store(outputStream, keyStorePassword.toCharArray());
+
+            return selfSignedCert;
+        }
+    }
+
+    public static void createTrustStore(final X509Certificate cert,
+                                        final String alias, final String password, final String path, final String truststoreType)
+            throws IOException, KeyStoreException, NoSuchAlgorithmException, CertificateException {
+
+        try (final FileOutputStream outputStream = new FileOutputStream(path)) {
+            final KeyStore trustStore = loadEmptyKeyStore(truststoreType);
+            trustStore.setCertificateEntry(alias, cert);
+            trustStore.store(outputStream, password.toCharArray());
+        }
+    }
+
+    private static Path generateTempKeystorePath(String keystoreType) throws IOException {
+        return Files.createTempFile("test-keystore-", getKeystoreExtension(keystoreType));
+    }
+
+    private static Path generateTempTruststorePath(String truststoreType) throws IOException {
+        return Files.createTempFile("test-truststore-", getKeystoreExtension(truststoreType));
+    }
+
+    /**
+     * Loads and returns an empty KeyStore backed by the appropriate provider
+     *
+     * @param keyStoreType the keyStoreType
+     * @return an empty KeyStore
+     * @throws KeyStoreException if a KeyStore of the given type cannot be instantiated
+     */
+    public static KeyStore loadEmptyKeyStore(String keyStoreType) throws KeyStoreException, CertificateException, NoSuchAlgorithmException, IOException {
+        final KeyStore keyStore;
+        try {
+            keyStore = KeyStore.getInstance(Objects.requireNonNull(getKeystoreType(keyStoreType)));
+//            keyStore = KeyStoreUtils.getKeyStore(keyStoreType);
+            keyStore.load(null, null);
+            return keyStore;
+        } catch (IOException e) {
+            logger.error("Encountered an error loading keystore: {}", e.getLocalizedMessage());
+            throw new IOException("Error loading keystore", e);
+        }
+    }
+
+    /**
+     * Returns the Keystore type in the correct format given the Keystore type.
+     *
+     * @param keystoreType     the Keystore type as a String
+     * @return the keystore type
+     */
+    public static String getKeystoreType(String keystoreType) {
+        // if true
+        if (KeystoreType.isValidKeystoreType(keystoreType)) {
+            return KeystoreType.valueOf(keystoreType.toUpperCase()).toString();
+        } else {
+            logger.debug("The given Keystore must be of type JKS or PKCS12.");
+            throw new IllegalArgumentException("The given Keystore type is not valid: " + keystoreType);
+        }
+    }
+
+    /**
+     * Returns the Keystore extension given the Keystore type.
+     *
+     * @param keystoreType     the Keystore type as a String
+     * @return the keystore extension
+     */
+    public static String getKeystoreExtension(String keystoreType) {
+        if (KeystoreType.PKCS12.toString().equalsIgnoreCase(keystoreType)) {
+            return KEYSTORE_PKCS12_EXT;
+        } else if (KeystoreType.JKS.toString().equalsIgnoreCase(keystoreType)){
+            return KEYSTORE_JKS_EXT;
+        } else {
+            logger.debug("There is no Keystore file extension for the given Keystore Type: " + keystoreType +
+                    ". The Keystore must be of type JKS or PKCS12.");
+            throw new IllegalArgumentException("There was an error finding the appropriate Keystore extension. " +
+                    "The given Keystore type is not valid: " + keystoreType);
+        }
+    }
+
+    /**
      * Returns the {@link KeyManagerFactory} from the provided {@link KeyStore} object, initialized with the key or keystore password.
      *
      * @param keyStore         the loaded keystore
@@ -177,7 +472,6 @@ public class KeyStoreUtils {
         return getKeyManagerFactoryFromKeyStore(keyStore, keystorePasswordChars, keyPasswordChars);
     }
 
-
     /**
      * Returns a loaded {@link KeyStore} (acting as a truststore) given the provided configuration values.
      *
@@ -220,7 +514,7 @@ public class KeyStoreUtils {
     }
 
     /**
-     * Returns the intialized {@link TrustManagerFactory}.
+     * Returns the initialized {@link TrustManagerFactory}.
      *
      * @param tlsConfiguration the TLS configuration
      * @return the initialized trust manager factory
