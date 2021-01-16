@@ -106,7 +106,10 @@ public class TestListenHTTP {
 
         clientTlsConfiguration = KeyStoreUtils.createTlsConfigAndNewKeystoreTruststore();
 
-        trustOnlyTlsConfiguration = new StandardTlsConfiguration(null, null, null, null, clientTlsConfiguration.getTruststorePath(), clientTlsConfiguration.getTruststorePassword(), clientTlsConfiguration.getTruststoreType(), TlsConfiguration.getHighestCurrentSupportedTlsProtocolVersion());
+        trustOnlyTlsConfiguration = new StandardTlsConfiguration(
+                null, null, null, null,
+                clientTlsConfiguration.getTruststorePath(), clientTlsConfiguration.getTruststorePassword(),
+                clientTlsConfiguration.getTruststoreType(), TlsConfiguration.getHighestCurrentSupportedTlsProtocolVersion());
     }
 
     @AfterClass
