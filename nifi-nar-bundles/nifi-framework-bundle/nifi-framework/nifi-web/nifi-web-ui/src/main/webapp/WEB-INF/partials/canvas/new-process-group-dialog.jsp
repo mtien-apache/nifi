@@ -20,7 +20,7 @@
         <div class="setting">
             <div class="setting-name">Process group name</div>
             <div class="setting-field">
-                <input id="new-process-group-name" type="text"/>
+                <input id="new-process-group-name" type="text" placeholder="Enter a name or upload a file"/>
             </div>
         </div>
         <div class="setting">
@@ -28,6 +28,13 @@
                 <i class="fa fa-cloud-download" aria-hidden="true" style="margin-left: 5px; margin-right: 5px;"></i>
                 Import...
             </span>
+            <span id="upload-process-group-link" class="link" title="Import a flow">
+                <i class="icon icon-template-import" aria-hidden="true" style="margin-left: 5px; margin-right: 5px;"></i>
+                Upload file...
+            </span>
+            <form id="file-upload-form" enctype="multipart/form-data" method="post">
+                <input type="file" name="file" id="upload-file-field"/>
+            </form>
         </div>
     </div>
 </div>

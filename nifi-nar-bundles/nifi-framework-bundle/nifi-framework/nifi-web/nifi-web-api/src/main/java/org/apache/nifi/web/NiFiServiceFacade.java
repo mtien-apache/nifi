@@ -17,6 +17,14 @@
 package org.apache.nifi.web;
 
 import io.prometheus.client.CollectorRegistry;
+import java.io.IOException;
+import java.util.Collection;
+import java.util.Date;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+import java.util.function.Function;
 import org.apache.nifi.authorization.AuthorizeAccess;
 import org.apache.nifi.authorization.RequestAction;
 import org.apache.nifi.authorization.user.NiFiUser;
@@ -128,14 +136,6 @@ import org.apache.nifi.web.api.entity.VersionControlComponentMappingEntity;
 import org.apache.nifi.web.api.entity.VersionControlInformationEntity;
 import org.apache.nifi.web.api.entity.VersionedFlowEntity;
 import org.apache.nifi.web.api.entity.VersionedFlowSnapshotMetadataEntity;
-
-import java.util.Collection;
-import java.util.Date;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
-import java.util.function.Function;
 
 /**
  * Defines the NiFiServiceFacade interface.
@@ -1569,6 +1569,16 @@ public interface NiFiServiceFacade {
      * @throws ResourceNotFoundException if the Versioned Flow Snapshot could not be found
      */
     VersionedFlowSnapshot getVersionedFlowSnapshotByGroupId(String processGroupId);
+
+    /**
+     * Transform a JSON file to a Versioned Flow Snapshot
+     *
+     * @param versionFile the file of a versioned flow
+     * @return the VersionedFlowSnapshot
+     *
+     * @throws ResourceNotFoundException if the Versioned Flow Snapshot could not be found
+     */
+    VersionedFlowSnapshot deserializeVersionedFlowSnapshot(String versionFile) throws IOException;
 
     /**
      * Get the current state of the Process Group with the given ID, converted to a Versioned Flow Snapshot

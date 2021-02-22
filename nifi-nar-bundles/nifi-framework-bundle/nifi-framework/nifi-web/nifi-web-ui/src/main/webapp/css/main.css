@@ -259,48 +259,57 @@ span.details-title {
 
 /* new template */
 
-#new-template-description {
+#new-template-description,
+#new-file-description {
     height: 210px;
 }
 
 /* upload */
 
-#select-template-container {
+#select-template-container,
+#select-file-container {
 }
 
-#template-browse-container {
+#template-browse-container,
+#file-browse-container {
     display: block;
     height: 20px;
 }
 
-#select-template-label {
+#select-template-label,
+#select-file-label {
     font-weight: bold;
     font-size: 14px;
     line-height: 28px;
 }
 
-#select-template-button {
+#select-template-button,
+#select-file-button {
     position: absolute;
     top: 0px;
     left: 135px;
     height: 28px;
 }
 
-#template-file-field {
+#template-file-field,
+#upload-file-field {
     display: none;
 }
 
-#submit-template-container {
+#submit-template-container,
+#submit-file-container {
     margin-top: 20px;
 }
 
-#selected-template-name {
+#selected-template-name,
+#selected-file-name {
     font-weight: bold;
     font-family: Roboto;
     font-size: 13px;
 }
 
-#upload-template-status {
+#upload-template-status,
+#upload-file-status {
     margin-top: 10px;
     font-weight: bold;
     font-family: Roboto;
@@ -308,20 +317,23 @@ span.details-title {
     color: #ba554a;
 }
 
-#upload-template-container button {
+#upload-template-container button,
+#upload-file-container button {
     float: right;
     font-size: 16px;
     line-height: 14px;
     margin-left: 1px;
 }
 
-#upload-template-button {
+#upload-template-button,
+#upload-file-button {
     color: #004849;
     font-size: 16px;
     cursor: pointer;
 }
 
-#template-file-upload {
+#template-file-upload,
+#file-upload {
     position: absolute;
     top: 0;
     left: 0;
