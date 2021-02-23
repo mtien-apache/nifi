@@ -126,13 +126,11 @@
             // create a new processor of the defined type
             return $.ajax({
                 type: 'POST',
-                //TODO: need to fix this endpoint
                 url: serviceProvider.headerCtrl.toolboxCtrl.config.urls.api + '/process-groups/' +
                     encodeURIComponent(nfCanvasUtils.getGroupId()) + '/process-groups/upload',
                 data: JSON.stringify(processGroupEntity),
                 dataType: 'json',
-                contentType: 'application/json'
-                // contentType: 'multipart/form-data'
+                contentType: 'multipart/form-data'
             }).done(function (response) {
                 // add the process group to the graph
                 nfGraph.add({
@@ -182,28 +180,11 @@
                     self.fileForm = $('#file-upload-form').ajaxForm({
                         url: '../nifi-api/process-groups/',
                         dataType: 'json',
-                        beforeSubmit: function (formData, $form, options) {
-                            // indicate if a disconnected node is acknowledged
-                            formData.push({
-                                    name: 'disconnectedNodeAcknowledged',
-                                    value: nfStorage.isDisconnectionAcknowledged()
-                                },
-                                {
-                                    name: 'clientId',
-                                    value: nfClient.getRevision({
-                                        'revision': {
-                                            'version': 0
-                                        }
-                                    })
-                                }
-                                );
-
+                        beforeSubmit: function ($form, options) {
                             // ensure uploading to the current process group
                             options.url += (encodeURIComponent(nfCanvasUtils.getGroupId()) + '/process-groups/upload');
                         },
                         success: function (response, statusText, xhr, form) {
-                            //TODO: finish createGroupFromFile logic (ie, response.identifier, fileId, revision info)
-                            // createGroupFromFile(groupName, pt, response.identifier).done(function (response) {
                                 // see if the import was successful and inform the user
                                 if (response.documentElement.tagName === 'processGroupEntity') {
                                     nfDialog.showOkDialog({
@@ -221,14 +202,6 @@
                                         }
                                     }
                                 }
-                            // }).fail(function (error) {
-                            //     // show reason
-                            //     nfDialog.showOkDialog({
-                            //         headerText: 'Unable to create process group',
-                            //         dialogContent: nfCommon.escapeHtml(error)
-                            //     });
-                            // });
-
                         },
                         error: function (xhr, statusText, error) {
                             // request failed
@@ -375,12 +348,37 @@
                             deferred.reject();
                         } else {
                             if (!nfCommon.isUndefinedOrNull(self.modal.fileToBeUploaded)) {
-                                //TODO: put beforeSubmit formData here for the pt
 
-                                // self.fileForm = $('#file-upload-form')
+                                self.fileForm = $('#file-upload-form').ajaxForm({
+                                        url: '../nifi-api/process-groups/',
+                                        dataType: 'json',
+                                        beforeSubmit: function (formData, $form, options) {
+                                            // indicate if a disconnected node is acknowledged
+                                            formData.push({
+                                                    name: 'disconnectedNodeAcknowledged',
+                                                    value: nfStorage.isDisconnectionAcknowledged()
+                                                },
+                                                {
+                                                    name: 'groupName',
+                                                    value: groupName
+
+                                                },
+                                                {
+                                                    name: 'position-x',
+                                                    value: pt.x
+                                                },
+                                                {
+                                                    name: 'position-y',
+                                                    value: pt.y
+                                                }
+                                            );
+
+                                            // ensure uploading to the current process group
+                                            options.url += (encodeURIComponent(nfCanvasUtils.getGroupId()) + '/process-groups/upload');
+                                        }
+                                    });
 
                                 self.modal.fileForm.submit();
-                                deferred.reject();
                             } else {
                                 // create the group and resolve the deferred accordingly
                                 createGroup(groupName, pt).done(function (response) {
@@ -445,113 +443,7 @@
                     });
                 }).promise();
             }
-
-            // /**
-            //  * Prompts the user to enter the name for the group.
-            //  *
-            //  * @argument {object} pt        The point that the group was dropped.
-            //  * @argument {boolean} showImportLink Whether we should show the import link
-            //  */
-            // promptForGroupName: function (pt, showImportLink) {
-            //     var self = this; // 'self' is same as 'groupComponent'? use 'groupComponent.modal' instead?
-            //     var groupComponent = this;
-            //     return $.Deferred(function (deferred) {
-            //         var addGroup = function () {
-            //             // get the name of the group and clear the textfield
-            //             var groupName = $('#new-process-group-name').val();
-            //
-            //             // ensure the group name is specified
-            //             if (nfCommon.isBlank(groupName)) {
-            //                 nfDialog.showOkDialog({
-            //                     headerText: 'Configuration Error',
-            //                     dialogContent: 'The name of the process group must be specified.'
-            //                 });
-            //
-            //                 deferred.reject();
-            //             } else {
-            //                 if (!nfCommon.isUndefinedOrNull(self.modal.fileToBeUploaded)) {
-            //                     self.modal.fileForm.submit().then(function (response) {
-            //                         // create the group from the file and resolve the deferred accordingly
-            //                         //TODO: finish createGroupFromFile logic (ie, response.identifier, fileId, revision info)
-            //                         createGroupFromFile(groupName, pt, response.identifier).done(function (response) {
-            //                             deferred.resolve(response.component);
-            //                         }).fail(function () {
-            //                             deferred.reject();
-            //                         });
-            //                     });
-            //                 } else {
-            //                      // create the group and resolve the deferred accordingly
-            //                     createGroup(groupName, pt).done(function (response) {
-            //                         deferred.resolve(response.component);
-            //                     }).fail(function () {
-            //                         deferred.reject();
-            //                     });
-            //                 }
-            //
-            //                 // hide the dialog
-            //                 groupComponent.modal.hide();
-            //             }
-            //         };
-            //
-            //         groupComponent.modal.update('setButtonModel', [{
-            //             buttonText: 'Add',
-            //             color: {
-            //                 base: '#728E9B',
-            //                 hover: '#004849',
-            //                 text: '#ffffff'
-            //             },
-            //             handler: {
-            //                 click: addGroup
-            //
-            //                 // Alternative - do everything in one click:
-            //                 // if (fileForm is present) {
-            //                 //     createProcessGroupfromFile();
-            //                 //     submit the fileForm and return a PG entity
-            //                 // } else {
-            //                 //     createEmptyProcessGroup();
-            //                 // }
-            //             }
-            //         },
-            //             {
-            //                 buttonText: 'Cancel',
-            //                 color: {
-            //                     base: '#E3E8EB',
-            //                     hover: '#C7D2D7',
-            //                     text: '#004849'
-            //                 },
-            //                 handler: {
-            //                     click: function () {
-            //                         // reject the deferred
-            //                         deferred.reject();
-            //
-            //                         // close the dialog
-            //                         groupComponent.modal.hide();
-            //                     }
-            //                 }
-            //             }]);
-            //
-            //         $('#upload-process-group-link').show();
-            //
-            //         if (showImportLink === true && nfCommon.canVersionFlows()) {
-            //             $('#import-process-group-link').show();
-            //         } else {
-            //             $('#import-process-group-link').hide();
-            //         }
-            //
-            //         // show the dialog
-            //         groupComponent.modal.storePt(pt);
-            //         groupComponent.modal.show();
-            //
-            //         // set up the focus and key handlers
-            //         $('#new-process-group-name').focus().off('keyup').on('keyup', function (e) {
-            //             var code = e.keyCode ? e.keyCode : e.which;
-            //             if (code === $.ui.keyCode.ENTER) {
-            //                 addGroup();
-            //             }
-            //         });
-            //     }).promise();
-            // }
-        }
+        };
 
         var groupComponent = new GroupComponent();
         return groupComponent;

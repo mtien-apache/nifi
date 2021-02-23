@@ -30,7 +30,7 @@
             </span>
             <span id="upload-process-group-link" class="link" title="Import a flow">
                 <i class="icon icon-template-import" aria-hidden="true" style="margin-left: 5px; margin-right: 5px;"></i>
-                Upload file...
+                Select file...
             </span>
             <form id="file-upload-form" enctype="multipart/form-data" method="post">
                 <input type="file" name="file" id="upload-file-field"/>

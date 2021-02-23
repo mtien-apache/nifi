@@ -22,7 +22,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.module.jaxb.JaxbAnnotationIntrospector;
 import com.google.common.collect.Sets;
 import io.prometheus.client.CollectorRegistry;
-import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
@@ -4529,7 +4528,7 @@ public class StandardNiFiServiceFacade implements NiFiServiceFacade {
         mapper.setAnnotationIntrospector(new JaxbAnnotationIntrospector(mapper.getTypeFactory()));
         mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
 
-        final VersionedFlowSnapshot deserializedSnapshot = mapper.readValue(new File(versionFile), VersionedFlowSnapshot.class);
+        final VersionedFlowSnapshot deserializedSnapshot = mapper.readValue(versionFile, VersionedFlowSnapshot.class);
         if (deserializedSnapshot == null) {
             throw new IOException("Unable to deserialize flow version");
         }
