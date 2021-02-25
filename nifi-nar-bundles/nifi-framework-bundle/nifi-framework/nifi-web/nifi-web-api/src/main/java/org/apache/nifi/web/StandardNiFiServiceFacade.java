@@ -15,11 +15,6 @@
  * limitations under the License.
  */
 package org.apache.nifi.web;
-
-import com.fasterxml.jackson.annotation.JsonInclude;
-import com.fasterxml.jackson.databind.DeserializationFeature;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.module.jaxb.JaxbAnnotationIntrospector;
 import com.google.common.collect.Sets;
 import io.prometheus.client.CollectorRegistry;
 import java.io.IOException;
@@ -4517,22 +4512,6 @@ public class StandardNiFiServiceFacade implements NiFiServiceFacade {
     public VersionedFlowSnapshot getVersionedFlowSnapshot(final VersionControlInformationDTO versionControlInfo, final boolean fetchRemoteFlows) {
         return getVersionedFlowSnapshot(versionControlInfo.getRegistryId(), versionControlInfo.getBucketId(), versionControlInfo.getFlowId(),
                 versionControlInfo.getVersion(), fetchRemoteFlows);
-    }
-
-    @Override
-    public VersionedFlowSnapshot deserializeVersionedFlowSnapshot(final String versionFile) throws IOException {
-        final ObjectMapper mapper = new ObjectMapper();
-
-        mapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
-        mapper.setDefaultPropertyInclusion(JsonInclude.Value.construct(JsonInclude.Include.NON_NULL, JsonInclude.Include.NON_NULL));
-        mapper.setAnnotationIntrospector(new JaxbAnnotationIntrospector(mapper.getTypeFactory()));
-        mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
-
-        final VersionedFlowSnapshot deserializedSnapshot = mapper.readValue(versionFile, VersionedFlowSnapshot.class);
-        if (deserializedSnapshot == null) {
-            throw new IOException("Unable to deserialize flow version");
-        }
-        return deserializedSnapshot;
     }
 
     /**
