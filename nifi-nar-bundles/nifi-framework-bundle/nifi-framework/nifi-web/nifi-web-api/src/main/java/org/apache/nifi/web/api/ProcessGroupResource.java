@@ -17,6 +17,7 @@
 package org.apache.nifi.web.api;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.module.jaxb.JaxbAnnotationIntrospector;
@@ -4229,19 +4230,23 @@ public class ProcessGroupResource extends FlowUpdateResource<ProcessGroupImportE
             )
             @FormDataParam("position-y") final Double positionY,
             @ApiParam(
+                    value = "The client id.",
+                    required = true
+            )
+            @FormDataParam("clientId") final String clientId,
+            @ApiParam(
                     value = "Acknowledges that this node is disconnected to allow for mutable requests to proceed.",
                     required = false
             )
             @FormDataParam(DISCONNECTED_NODE_ACKNOWLEDGED) @DefaultValue("false") final Boolean disconnectedNodeAcknowledged,
             @FormDataParam("file") final InputStream in) throws IOException {
 
-
         // ensure the group name is specified
         if (StringUtils.isBlank(groupName)) {
             throw new IllegalArgumentException("The process group name is required.");
         }
 
-        if (groupId == null) {
+        if (StringUtils.isBlank(groupId)) {
             throw new IllegalArgumentException("The parent process group id must be the same as specified in the URI.");
         }
 
@@ -4251,6 +4256,10 @@ public class ProcessGroupResource extends FlowUpdateResource<ProcessGroupImportE
 
         if (positionY == null) {
             throw new IllegalArgumentException("The y coordinate of the proposed position must be specified.");
+        }
+
+        if (StringUtils.isBlank(clientId)) {
+            throw new IllegalArgumentException("The client id must be specified");
         }
 
         // create a new process group
@@ -4263,16 +4272,27 @@ public class ProcessGroupResource extends FlowUpdateResource<ProcessGroupImportE
         }
 
         // deserialize content to a VersionedFlowSnapshot
+        VersionedFlowSnapshot deserializedSnapshot = null;
         final ObjectMapper mapper = new ObjectMapper();
 
-        mapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
-        mapper.setDefaultPropertyInclusion(JsonInclude.Value.construct(JsonInclude.Include.NON_NULL, JsonInclude.Include.NON_NULL));
-        mapper.setAnnotationIntrospector(new JaxbAnnotationIntrospector(mapper.getTypeFactory()));
-        mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+        if (stringContent.length() > 0) {
+            try {
+                mapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
+                mapper.setDefaultPropertyInclusion(JsonInclude.Value.construct(JsonInclude.Include.NON_NULL, JsonInclude.Include.NON_NULL));
+                mapper.setAnnotationIntrospector(new JaxbAnnotationIntrospector(mapper.getTypeFactory()));
+                mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
 
-        final VersionedFlowSnapshot deserializedSnapshot = mapper.readValue(stringContent, VersionedFlowSnapshot.class);
-        if (deserializedSnapshot == null) {
-            throw new IOException("Unable to deserialize flow version");
+                deserializedSnapshot = mapper.readValue(stringContent, VersionedFlowSnapshot.class);
+            } catch (JsonParseException jpe) {
+                logger.warn("The file uploaded is not a valid JSON format: ", jpe);
+                String responseJson = "The specified file is not a valid JSON format.";
+                return Response.status(Response.Status.OK).entity(responseJson).type("application/json").build();
+            } catch (IOException e) {
+                logger.warn("An error occurred while deserializing the flow version.", e);
+            }
+        } else {
+            logger.warn("The uploaded file was empty");
+            throw new IOException("The uploaded file was empty.");
         }
 
         sanitizeRegistryInfo(deserializedSnapshot.getFlowContents());
@@ -4292,7 +4312,7 @@ public class ProcessGroupResource extends FlowUpdateResource<ProcessGroupImportE
         newProcessGroupEntity.setComponent(processGroupDTO);
         newProcessGroupEntity.setVersionedFlowSnapshot(deserializedSnapshot);
 
-        // position DTO
+        // create a PositionDTO
         PositionDTO positionDTO = new PositionDTO();
         positionDTO.setX(positionX);
         positionDTO.setY(positionY);
@@ -4354,7 +4374,6 @@ public class ProcessGroupResource extends FlowUpdateResource<ProcessGroupImportE
                     }
 
                     // create the process group contents
-                    final String clientId = UUID.randomUUID().toString();
                     final Revision revision = new Revision((long) 0, clientId, processGroup.getId());
 
                     ProcessGroupEntity entity = serviceFacade.createProcessGroup(revision, groupId, processGroup);
@@ -4366,8 +4385,8 @@ public class ProcessGroupResource extends FlowUpdateResource<ProcessGroupImportE
 
                         // We don't want the Process Group's position to be updated because we want to keep the position where the user
                         // placed the Process Group. We do not want to use the name of the Process Group that is in the Flow Contents.
-                        // To accomplish this, we call updateProcessGroupContents() passing 'false' for the updateSettings flag, set the Process Group
-                        // name, and null out the position.
+                        // To accomplish this, we call updateProcessGroupContents() passing 'false' for the updateSettings flag, set
+                        // the Process Group name, and null out the position.
                         flowSnapshot.getFlowContents().setPosition(null);
                         flowSnapshot.getFlowContents().setName(groupName);
 
