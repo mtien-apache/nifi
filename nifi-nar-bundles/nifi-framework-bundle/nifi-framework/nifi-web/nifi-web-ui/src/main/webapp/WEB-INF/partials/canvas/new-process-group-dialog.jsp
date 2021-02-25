@@ -29,6 +29,11 @@
                 <input id="new-process-group-name" type="text" placeholder="Enter a name or select a file to upload"/>
             </div>
         </div>
+        <div id="file-cancel-button-container">
+            <button class="icon" id="file-cancel-button" aria-hidden="true">
+                <i class="fa fa-times"></i>
+            </button>
+        </div>
         <div class="setting">
             <div id="submit-file-container">
                 <div class="setting-name">

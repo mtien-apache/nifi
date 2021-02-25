@@ -167,6 +167,8 @@
                     });
 
                     $('#upload-file-field').on('change', function (e) {
+                        $('#upload-file-field-button').hide();
+
                         self.fileToBeUploaded = e.target;
                         var filename = $(this).val();
                         var filenameExtension;
@@ -184,8 +186,25 @@
                         }
 
                         // set the filename
-                        $('#new-process-group-name').val(filename);
+                        if (!$('#new-process-group-name').val()) {
+                            $('#new-process-group-name').val(filename);
+                        }
+
+                        $('#file-cancel-button').show();
                     });
+
+                    // cancel file button
+                    $('#file-cancel-button').on('click', function () {
+                        // clear the values
+                        $('#new-process-group-name').val('');
+                        $('#submit-file-container').hide();
+                        $('#selected-file-name').text('');
+                        $('#upload-file-field').val('');
+                        self.fileToBeUploaded = null;
+
+                        $('#file-cancel-button').hide();
+                        $('#upload-file-field-button').show();
+                    })
                 },
 
                 /**
@@ -418,6 +437,9 @@
 
                     // hide the selected file to upload title
                     $('#submit-file-container').hide();
+
+                    // hide file cancel button
+                    $('#file-cancel-button').hide();
 
                     // determine if import from registry link should show
                     if (showImportLink === true && nfCommon.canVersionFlows()) {

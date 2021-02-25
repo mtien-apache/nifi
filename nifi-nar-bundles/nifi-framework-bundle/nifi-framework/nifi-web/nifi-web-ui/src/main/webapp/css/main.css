@@ -290,15 +290,6 @@ span.details-title {
     height: 28px;
 }
 
-button #upload-field-field-button {
-    position: absolute;
-    float: right;
-    right: 7px;
-    top: 7px;
-    color: #004849;
-    border: none;
-}
-
 #select-file-button button {
     position: absolute;
     float: right;
@@ -334,6 +325,7 @@ button #upload-field-field-button {
 #submit-file-container {
     position: absolute;
     float: left;
+    max-width: 90%;
 }
 
 #selected-template-name {
@@ -347,6 +339,7 @@ button #upload-field-field-button {
     font-family: Roboto;
     font-size: 13px;
     color: #775331;
+    word-break: break-all;
 }
 
 #upload-template-status,
@@ -406,4 +399,16 @@ span#import-process-group-link.link-over {
 span#import-process-group-link.link-bold {
     font-weight: bold;
     border-bottom: none;
+}
+
+#file-cancel-button {
+    position: absolute;
+    width: 0px;
+    height: 0px;
+    right: 13px;
+    z-index: 1;
+    border: none;
+    background-color: transparent;
+    padding: 0px;
+    margin-top: 16px;
 }
